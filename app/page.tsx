@@ -1,27 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 // Define TypeScript interfaces for better type safety
 interface Program {
   id: number;
   name: string;
   version: string;
-  os: string[];
-  cpu_min: string;
-  cpu_rec: string;
-  ram_min: string;
-  ram_rec: string;
-  gpu_min: string;
-  gpu_rec: string;
-  disk_space: string;
-  disk_type: string;
+  OS: string;
+  CPU_min: string;
+  CPU_rec: string;
+  Ram_min: string;
+  Ram_Rec: string;
+  GPU_min: string;
+  GPU_rec: string;
+  Disk_Space: string;
   is_free: boolean;
   is_open_source: boolean;
 }
 
 interface Filters {
-  os: string;
+  OS: string;
   cpu: string;
   ram: string;
   gpu: string;
@@ -35,97 +35,12 @@ interface UserSpecs {
   cpuCores: string;
 }
 
-// This is a simulated database. The app now uses this data directly.
-const mockPrograms: Program[] = [
-  {
-    id: 1,
-    name: "Photoshop",
-    version: "2025",
-    os: ["Windows 10", "11", "macOS Monterey"],
-    cpu_min: "Intel Core i3",
-    cpu_rec: "Intel Core i5",
-    ram_min: "4 GB",
-    ram_rec: "8 GB",
-    gpu_min: "NVIDIA GTX 1050",
-    gpu_rec: "NVIDIA GTX 1060",
-    disk_space: "5 GB",
-    disk_type: "SSD",
-    is_free: false,
-    is_open_source: false,
-  },
-  {
-    id: 2,
-    name: "Blender",
-    version: "3.6",
-    os: ["Windows 10", "11", "macOS Monterey", "Linux"],
-    cpu_min: "Intel Core i3",
-    cpu_rec: "Intel Core i7",
-    ram_min: "8 GB",
-    ram_rec: "16 GB",
-    gpu_min: "NVIDIA GTX 760",
-    gpu_rec: "NVIDIA RTX 2060",
-    disk_space: "500 MB",
-    disk_type: "HDD",
-    is_free: true,
-    is_open_source: true,
-  },
-  {
-    id: 3,
-    name: "VS Code",
-    version: "1.80",
-    os: ["Windows 10", "11", "macOS Monterey", "Linux"],
-    cpu_min: "1.6 GHz Dual Core",
-    cpu_rec: "2.0 GHz Quad Core",
-    ram_min: "2 GB",
-    ram_rec: "4 GB",
-    gpu_min: "Intel HD",
-    gpu_rec: "Intel UHD",
-    disk_space: "200 MB",
-    disk_type: "SSD",
-    is_free: true,
-    is_open_source: true,
-  },
-  {
-    id: 4,
-    name: "Unity",
-    version: "2023.2",
-    os: ["Windows 10", "11", "macOS Monterey"],
-    cpu_min: "Intel Core i5",
-    cpu_rec: "Intel Core i7",
-    ram_min: "8 GB",
-    ram_rec: "16 GB",
-    gpu_min: "NVIDIA GeForce GT 740",
-    gpu_rec: "NVIDIA GeForce GTX 1060",
-    disk_space: "10 GB",
-    disk_type: "SSD",
-    is_free: true,
-    is_open_source: false,
-  },
-  {
-    id: 5,
-    name: "AutoCAD",
-    version: "2024",
-    os: ["Windows 10", "11", "macOS Monterey"],
-    cpu_min: "Intel Core i3",
-    cpu_rec: "Intel Core i7",
-    ram_min: "8 GB",
-    ram_rec: "16 GB",
-    gpu_min: "1 GB GPU with 29 GB/s Bandwidth",
-    gpu_rec: "8 GB GPU with 106 GB/s Bandwidth",
-    disk_space: "10 GB",
-    disk_type: "SSD",
-    is_free: false,
-    is_open_source: false,
-  },
-];
-
 // Main App Component
 export default function App() {
-  // Use mock data directly instead of fetching from an external API
-  const [programs, setPrograms] = useState<Program[]>(mockPrograms);
+  const [programs, setPrograms] = useState<Program[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filters, setFilters] = useState<Filters>({
-    os: "",
+    OS: "",
     cpu: "",
     ram: "",
     gpu: "",
@@ -133,8 +48,39 @@ export default function App() {
     isFree: false,
     isOpenSource: false,
   });
-  const [userSpecs, setUserSpecs] = useState<UserSpecs>({ ram: "", cpuCores: "" });
-  const [selectedProgramId, setSelectedProgramId] = useState<number | null>(null);
+  const [userSpecs, setUserSpecs] = useState<UserSpecs>({
+    ram: "",
+    cpuCores: "",
+  });
+  const [selectedProgramId, setSelectedProgramId] = useState<number | null>(
+    null
+  );
+
+  useEffect(() => {
+    async function fetchPrograms() {
+      const { data, error } = await supabase.from("programs").select("*");
+      if (!error && data) {
+        setPrograms(data as Program[]);
+        console.log("Fetched programs:", data); // این خط را اضافه کنید
+      }
+    }
+    fetchPrograms();
+  }, []);
+
+  useEffect(() => {
+    async function testConnection() {
+      const { data, error } = await supabase
+        .from("programs")
+        .select("*")
+        .limit(1);
+      if (error) {
+        console.error("Supabase connection error:", error.message);
+      } else {
+        console.log("Supabase connection successful. Sample data:", data);
+      }
+    }
+    testConnection();
+  }, []);
 
   // A helper function to parse ram string like "8 GB" to integer 8
   const parseRam = (ramStr: string): number => {
@@ -143,7 +89,7 @@ export default function App() {
   };
 
   // Define dropdown options
-  const osOptions = [
+  const OSOptions = [
     "",
     "Windows 11",
     "Windows 10",
@@ -183,22 +129,16 @@ export default function App() {
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesOS =
-      !filters.os ||
-      program.os.some((os) =>
-        os.toLowerCase().includes(filters.os.toLowerCase())
-      );
+      !filters.OS ||
+      program.OS.toLowerCase().includes(filters.OS.toLowerCase());
     const matchesCPU =
       !filters.cpu ||
-      program.cpu_min.toLowerCase().includes(filters.cpu.toLowerCase());
+      program.CPU_min.toLowerCase().includes(filters.cpu.toLowerCase());
     const matchesGPU =
       !filters.gpu ||
-      program.gpu_min.toLowerCase().includes(filters.gpu.toLowerCase());
-    const matchesDiskType =
-      !filters.diskType ||
-      (program.disk_type &&
-        program.disk_type.toLowerCase() === filters.diskType.toLowerCase());
+      program.GPU_min.toLowerCase().includes(filters.gpu.toLowerCase());
     const matchesRAM =
-      !filters.ram || parseRam(program.ram_min) <= parseRam(filters.ram);
+      !filters.ram || parseRam(program.Ram_min) <= parseRam(filters.ram);
     const matchesTags =
       (!filters.isFree || program.is_free) &&
       (!filters.isOpenSource || program.is_open_source);
@@ -208,7 +148,6 @@ export default function App() {
       matchesOS &&
       matchesCPU &&
       matchesGPU &&
-      matchesDiskType &&
       matchesRAM &&
       matchesTags
     );
@@ -231,11 +170,11 @@ export default function App() {
 
     if (!userRam || !userCores) return false;
 
-    const minRam = parseRam(program.ram_min);
-    
+    const minRam = parseRam(program.Ram_min);
+
     // For simplicity, we'll assume CPU cores are a good proxy for performance.
     // Extract number from CPU string like "Intel Core i5" -> 5, "1.6 GHz Dual Core" -> 2
-    const cpuMatch = program.cpu_min.match(/(\d+)/);
+    const cpuMatch = program.CPU_min.match(/(\d+)/);
     const minCores = cpuMatch ? parseInt(cpuMatch[1]) : 1;
 
     const isCompatible = userRam >= minRam && userCores >= minCores;
@@ -307,14 +246,14 @@ export default function App() {
           <div className="flex flex-wrap gap-4 justify-start">
             {/* OS Filter */}
             <select
-              name="os"
+              name="OS"
               onChange={handleFilterChange}
-              value={filters.os}
+              value={filters.OS}
               className="p-2 rounded-lg bg-gray-700 text-gray-100 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {osOptions.map((os) => (
-                <option key={os} value={os}>
-                  {os || "Select Operating System"}
+              {OSOptions.map((OS) => (
+                <option key={OS} value={OS}>
+                  {OS || "Select Operating System"}
                 </option>
               ))}
             </select>
@@ -426,7 +365,7 @@ export default function App() {
                 </span>
               </h3>
               <p className="text-sm text-gray-500 mb-4">
-                {program.os.join(" / ")}
+                {program.OS || "No OS specified"}
               </p>
 
               <div className="space-y-3 mt-4">
@@ -434,41 +373,40 @@ export default function App() {
                   <span className="font-semibold text-gray-300">CPU:</span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Minimum: {program.cpu_min}
+                    Minimum: {program.CPU_min}
                   </span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Recommended: {program.cpu_rec}
+                    Recommended: {program.CPU_rec}
                   </span>
                 </p>
                 <p>
                   <span className="font-semibold text-gray-300">RAM:</span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Minimum: {program.ram_min}
+                    Minimum: {program.Ram_min}
                   </span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Recommended: {program.ram_rec}
+                    Recommended: {program.Ram_rec}
                   </span>
                 </p>
                 <p>
                   <span className="font-semibold text-gray-300">GPU:</span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Minimum: {program.gpu_min}
+                    Minimum: {program.GPU_min}
                   </span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Recommended: {program.gpu_rec}
+                    Recommended: {program.GPU_rec}
                   </span>
                 </p>
                 <p>
-                  <span className="font-semibold text-gray-300">Disk Type:</span>
-                  <br />
-                  <span className="text-gray-400 ml-4">
-                    {program.disk_type}
+                  <span className="font-semibold text-gray-300">
+                    Disk Type:
                   </span>
+                  <br />
                 </p>
                 <p>
                   <span className="font-semibold text-gray-300">
@@ -476,7 +414,7 @@ export default function App() {
                   </span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    {program.disk_space}
+                    {program.Disk_Space}
                   </span>
                 </p>
               </div>
@@ -501,6 +439,8 @@ export default function App() {
             </div>
           ))}
         </div>
+
+        {/* Simple Programs List */}
       </div>
     </div>
   );
