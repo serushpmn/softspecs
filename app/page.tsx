@@ -10,7 +10,7 @@ interface Program {
   version: string;
   OS: string[]; // آرایه
   CPU_min: string[]; // آرایه
-  CPU_rec: string;
+  CPU_rec: string[];
   Ram_min: string;
   Ram_Rec: string;
   GPU_min: string;
@@ -89,7 +89,10 @@ export default function App() {
     return match ? parseInt(match[1]) : 0;
   };
 
-  // استخراج گزینه‌های یکتا برای فیلترهای آرایه‌ای
+  // تابع کمکی برای حذف "or newer" و trim کردن
+  const cleanOS = (os: string) => os.replace(/or newer/gi, "").trim();
+
+  // استخراج گزینه‌های یکتا برای فیلترهای آرایه‌ای با حذف "or newer"
   const OSOptions = [
     "",
     ...Array.from(
@@ -97,6 +100,7 @@ export default function App() {
         programs
           .flatMap((p) => (Array.isArray(p.OS) ? p.OS : [p.OS]))
           .filter(Boolean)
+          .map(cleanOS)
       )
     ),
   ];
@@ -399,7 +403,9 @@ export default function App() {
                   <span className="text-gray-400 ml-4">
                     Rec:
                     <span className="text-gray-300 font-bold ml-2">
-                      {program.CPU_rec}
+                      {Array.isArray(program.CPU_rec)
+                        ? program.CPU_rec.join(" / ")
+                        : program.CPU_rec}
                     </span>
                   </span>
                 </p>
