@@ -395,8 +395,12 @@ export default function App() {
                     min:
                     <span className="text-gray-300 font-bold ml-2">
                       {Array.isArray(program.CPU_min)
-                        ? program.CPU_min.join(" / ")
-                        : program.CPU_min}
+                        ? program.CPU_min.length > 0
+                          ? program.CPU_min.join(" / ")
+                          : "Intel or AMD processor"
+                        : program.CPU_min
+                        ? program.CPU_min
+                        : "Intel or AMD processor"}
                     </span>
                   </span>
                   <br />
@@ -404,8 +408,12 @@ export default function App() {
                     Rec:
                     <span className="text-gray-300 font-bold ml-2">
                       {Array.isArray(program.CPU_rec)
-                        ? program.CPU_rec.join(" / ")
-                        : program.CPU_rec}
+                        ? program.CPU_rec.length > 0
+                          ? program.CPU_rec.join(" / ")
+                          : "Intel or AMD processor with 64-bit support"
+                        : program.CPU_rec
+                        ? program.CPU_rec
+                        : "Intel or AMD processor with 64-bit support"}
                     </span>
                   </span>
                 </p>
@@ -422,7 +430,7 @@ export default function App() {
                   <span className="text-gray-400 ml-4">
                     Rec:
                     <span className="text-gray-300 font-bold ml-2">
-                      {program.Ram_rec}
+                      {program.Ram_Rec}
                     </span>
                   </span>
                 </p>
