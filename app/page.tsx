@@ -8,8 +8,8 @@ interface Program {
   id: number;
   name: string;
   version: string;
-  OS: string;
-  CPU_min: string;
+  OS: string[]; // آرایه
+  CPU_min: string[]; // آرایه
   CPU_rec: string;
   Ram_min: string;
   Ram_Rec: string;
@@ -18,6 +18,7 @@ interface Program {
   Disk_Space: string;
   is_free: boolean;
   is_open_source: boolean;
+  featured: boolean; // اضافه شد
 }
 
 interface Filters {
@@ -88,57 +89,83 @@ export default function App() {
     return match ? parseInt(match[1]) : 0;
   };
 
-  // Define dropdown options
+  // استخراج گزینه‌های یکتا برای فیلترهای آرایه‌ای
   const OSOptions = [
     "",
-    "Windows 11",
-    "Windows 10",
-    "Windows 8",
-    "Windows 7",
-    "macOS",
-    "Linux",
+    ...Array.from(
+      new Set(
+        programs
+          .flatMap((p) => (Array.isArray(p.OS) ? p.OS : [p.OS]))
+          .filter(Boolean)
+      )
+    ),
   ];
+
   const cpuOptions = [
     "",
-    "Pentium",
-    "Intel Core i3",
-    "Intel Core i5",
-    "Intel Core i7",
-    "Intel Core i9",
-    "AMD...",
-    "M1",
-    "M2",
+    ...Array.from(
+      new Set(
+        programs
+          .flatMap((p) => (Array.isArray(p.CPU_min) ? p.CPU_min : [p.CPU_min]))
+          .filter(Boolean)
+      )
+    ),
   ];
+
   const ramOptions = [
     "",
-    ...Array.from({ length: 32 }, (_, i) => `${(i + 1) * 2} GB`),
+    ...Array.from(new Set(programs.map((p) => p.Ram_min).filter(Boolean))),
   ];
+
   const gpuOptions = [
     "",
-    "Intel HD",
-    "Intel UHD",
-    "NVIDIA GTX 1050",
-    "NVIDIA GTX 1060",
-    "NVIDIA 5090",
+    ...Array.from(new Set(programs.map((p) => p.GPU_min).filter(Boolean))),
   ];
-  const diskTypeOptions = ["", "HDD", "SSD"];
 
   // Filter the programs list based on search and filters
-  const filteredPrograms = programs.filter((program) => {
-    const matchesSearch = program.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+  const sortedPrograms = [...programs].sort((a, b) => {
+    // ابتدا featured=true، سپس بقیه
+    if (a.featured === b.featured) return 0;
+    return a.featured ? -1 : 1;
+  });
+
+  const filteredPrograms = sortedPrograms.filter((program) => {
+    // جستجو بر اساس نام
+    const matchesSearch =
+      !searchTerm ||
+      program.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // فیلتر سیستم عامل
     const matchesOS =
       !filters.OS ||
-      program.OS.toLowerCase().includes(filters.OS.toLowerCase());
+      (Array.isArray(program.OS)
+        ? program.OS.some((os) =>
+            os.toLowerCase().includes(filters.OS.toLowerCase())
+          )
+        : program.OS &&
+          program.OS.toLowerCase().includes(filters.OS.toLowerCase()));
+
+    // فیلتر CPU
     const matchesCPU =
       !filters.cpu ||
-      program.CPU_min.toLowerCase().includes(filters.cpu.toLowerCase());
+      (Array.isArray(program.CPU_min)
+        ? program.CPU_min.some((cpu) =>
+            cpu.toLowerCase().includes(filters.cpu.toLowerCase())
+          )
+        : program.CPU_min &&
+          program.CPU_min.toLowerCase().includes(filters.cpu.toLowerCase()));
+
+    // فیلتر GPU
     const matchesGPU =
       !filters.gpu ||
-      program.GPU_min.toLowerCase().includes(filters.gpu.toLowerCase());
+      (program.GPU_min &&
+        program.GPU_min.toLowerCase().includes(filters.gpu.toLowerCase()));
+
+    // فیلتر RAM
     const matchesRAM =
       !filters.ram || parseRam(program.Ram_min) <= parseRam(filters.ram);
+
+    // فیلتر رایگان و متن‌باز
     const matchesTags =
       (!filters.isFree || program.is_free) &&
       (!filters.isOpenSource || program.is_open_source);
@@ -300,20 +327,6 @@ export default function App() {
               ))}
             </select>
 
-            {/* Disk Type Filter */}
-            <select
-              name="diskType"
-              onChange={handleFilterChange}
-              value={filters.diskType}
-              className="p-2 rounded-lg bg-gray-700 text-gray-100 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {diskTypeOptions.map((type) => (
-                <option key={type} value={type}>
-                  {type || "Select Disk Type"}
-                </option>
-              ))}
-            </select>
-
             {/* Tags as Buttons */}
             <button
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
@@ -364,8 +377,10 @@ export default function App() {
                   ({program.version})
                 </span>
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {program.OS || "No OS specified"}
+              <p className="text-md text-gray-300 mb-4">
+                {Array.isArray(program.OS)
+                  ? program.OS.join(" / ")
+                  : program.OS || "No OS specified"}
               </p>
 
               <div className="space-y-3 mt-4">
@@ -373,47 +388,62 @@ export default function App() {
                   <span className="font-semibold text-gray-300">CPU:</span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Minimum: {program.CPU_min}
+                    min:
+                    <span className="text-gray-300 font-bold ml-2">
+                      {Array.isArray(program.CPU_min)
+                        ? program.CPU_min.join(" / ")
+                        : program.CPU_min}
+                    </span>
                   </span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Recommended: {program.CPU_rec}
+                    Rec:
+                    <span className="text-gray-300 font-bold ml-2">
+                      {program.CPU_rec}
+                    </span>
                   </span>
                 </p>
                 <p>
                   <span className="font-semibold text-gray-300">RAM:</span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Minimum: {program.Ram_min}
+                    min:
+                    <span className="text-gray-300 font-bold ml-2">
+                      {program.Ram_min}
+                    </span>
                   </span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Recommended: {program.Ram_rec}
+                    Rec:
+                    <span className="text-gray-300 font-bold ml-2">
+                      {program.Ram_rec}
+                    </span>
                   </span>
                 </p>
                 <p>
                   <span className="font-semibold text-gray-300">GPU:</span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Minimum: {program.GPU_min}
+                    min:
+                    <span className="text-gray-300 font-bold ml-2">
+                      {program.GPU_min}
+                    </span>
                   </span>
                   <br />
                   <span className="text-gray-400 ml-4">
-                    Recommended: {program.GPU_rec}
+                    Rec:
+                    <span className="text-gray-300 font-bold ml-2">
+                      {program.GPU_rec}
+                    </span>
                   </span>
                 </p>
-                <p>
-                  <span className="font-semibold text-gray-300">
-                    Disk Type:
-                  </span>
-                  <br />
-                </p>
+
                 <p>
                   <span className="font-semibold text-gray-300">
                     Disk Space:
                   </span>
                   <br />
-                  <span className="text-gray-400 ml-4">
+                  <span className="text-gray-400 font-semibold ml-4">
                     {program.Disk_Space}
                   </span>
                 </p>
@@ -436,11 +466,18 @@ export default function App() {
                   </span>
                 )}
               </div>
+
+              {/* ستاره برای featured */}
+              {program.featured && (
+                <div className="flex justify-end mt-2">
+                  <span title="Featured" className="text-yellow-400 text-xl">
+                    ★
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>
-
-        {/* Simple Programs List */}
       </div>
     </div>
   );
