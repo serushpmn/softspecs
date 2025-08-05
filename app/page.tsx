@@ -228,43 +228,6 @@ export default function App() {
           </p>
         </header>
 
-        {/* User's System Info Input */}
-        <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
-          <h2 className="text-2xl font-semibold mb-2 text-blue-300">
-            Your System Specifications
-          </h2>
-          <div className="flex flex-wrap gap-4">
-            <input
-              type="number"
-              name="ram"
-              placeholder="RAM (GB)"
-              value={userSpecs.ram}
-              onChange={handleUserSpecChange}
-              className="w-40 p-2 rounded-lg bg-gray-700 text-gray-100 placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="number"
-              name="cpuCores"
-              placeholder="CPU Cores"
-              value={userSpecs.cpuCores}
-              onChange={handleUserSpecChange}
-              className="w-40 p-2 rounded-lg bg-gray-700 text-gray-100 placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          {selectedProgram && (
-            <div className="mt-4 p-3 rounded-lg flex items-center gap-2">
-              <span className="text-sm font-semibold">
-                Compatibility with {selectedProgram.name}:
-              </span>
-              {checkCompatibility(selectedProgram) ? (
-                <span className="text-green-400 font-bold">✅ Compatible</span>
-              ) : (
-                <span className="text-red-400 font-bold">❌ Incompatible</span>
-              )}
-            </div>
-          )}
-        </div>
-
         {/* Search and Filters */}
         <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
           <input
