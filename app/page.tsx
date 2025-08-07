@@ -12,7 +12,7 @@ interface Program {
   CPU_min: string[]; // آرایه
   CPU_rec: string[];
   Ram_min: string;
-  Ram_Rec: string;
+  Ram_rec: string;
   GPU_min: string;
   GPU_rec: string;
   Disk_Space: string;
@@ -393,7 +393,7 @@ export default function App() {
                   <span className="text-gray-400 ml-4">
                     Rec:
                     <span className="text-gray-300 font-bold ml-2">
-                      {program.Ram_Rec}
+                      {program.Ram_rec}
                     </span>
                   </span>
                 </p>
