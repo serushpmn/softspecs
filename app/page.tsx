@@ -3,12 +3,12 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-// Define TypeScript interfaces for better type safety
+// Types
 interface Program {
   id: number;
   name: string;
   version: string;
-  OS: string[] | string; // ← allow string or array
+  OS: string[] | string;
   CPU_min: string[] | string;
   CPU_rec: string[] | string;
   Ram_min: string | number;
@@ -19,6 +19,7 @@ interface Program {
   is_free: boolean;
   is_open_source: boolean;
   featured: boolean;
+  category?: string[];
 }
 
 interface Filters {
@@ -36,7 +37,6 @@ interface UserSpecs {
   cpuCores: string;
 }
 
-// تعریف مدل‌های جدید
 interface Cpu {
   id: number;
   name: string;
@@ -60,9 +60,7 @@ interface Os {
 
 // Main App Component
 export default function App() {
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [filters, setFilters] = useState<Filters>({
+  const defaultFilters: Filters = {
     OS: "",
     cpu: "",
     ram: "",
@@ -70,7 +68,11 @@ export default function App() {
     diskType: "",
     isFree: false,
     isOpenSource: false,
-  });
+  };
+
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [userSpecs, setUserSpecs] = useState<UserSpecs>({
     ram: "",
     cpuCores: "",
@@ -82,6 +84,8 @@ export default function App() {
   const [gpuList, setGpuList] = useState<Gpu[]>([]);
   const [ramList, setRamList] = useState<Ram[]>([]);
   const [osList, setOsList] = useState<Os[]>([]);
+  const [pendingFilters, setPendingFilters] = useState<Filters>(defaultFilters);
+  const [pendingSearch, setPendingSearch] = useState<string>("");
 
   // Load lookup tables (cpus/gpus/rams) for select options
   useEffect(() => {
@@ -374,31 +378,55 @@ export default function App() {
     }, []);
 
     const filtered = options
-      .filter(Boolean)
+      // حذف نکن! باید گزینه خالی ("") باقی بماند
       .filter((opt) => opt.toLowerCase().includes(query.toLowerCase()));
+
+    // همیشه گزینه خالی را اول لیست بیاور
+    const list = Array.from(new Set(["", ...filtered]));
+
+    const labelOf = (opt: string) => (opt === "" ? "Any" : opt);
 
     return (
       <div className={`relative ${width}`} ref={ref}>
         <label className="block text-xs text-gray-400 mb-1">{label}</label>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          placeholder={placeholder}
-          className="w-full p-2 rounded-lg bg-gray-700 text-gray-100 placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <div className="relative">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setOpen(false);
+            }}
+            placeholder={placeholder}
+            className="w-full pr-8 p-2 rounded-lg bg-gray-700 text-gray-100 placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {(value || query) && (
+            <button
+              type="button"
+              aria-label="Clear"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-white"
+              onClick={() => {
+                onSelect("");
+                setQuery("");
+                setOpen(false);
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
         {open && (
           <div className="absolute z-20 mt-1 w-full max-h-56 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
-            {filtered.length === 0 ? (
+            {list.length === 0 ? (
               <div className="px-3 py-2 text-gray-400 text-sm">No results</div>
             ) : (
-              filtered.map((opt) => (
+              list.map((opt) => (
                 <div
-                  key={opt}
+                  key={opt || "__ANY__"}
                   className={`px-3 py-2 cursor-pointer text-sm hover:bg-blue-600 hover:text-white ${
                     opt === value ? "bg-blue-700 text-white" : ""
                   }`}
@@ -408,7 +436,7 @@ export default function App() {
                     setOpen(false);
                   }}
                 >
-                  {opt}
+                  {labelOf(opt)}
                 </div>
               ))
             )}
@@ -416,7 +444,7 @@ export default function App() {
         )}
       </div>
     );
-  } // ← پایان تابع Autocomplete
+  }
 
   // رندر اصلی صفحه
   return (
@@ -432,41 +460,68 @@ export default function App() {
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 space-y-4">
           <input
             type="text"
-            value={searchTerm}
+            value={pendingSearch}
             placeholder="Search program..."
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setPendingSearch(e.target.value)}
             className="w-full p-2 rounded-lg bg-gray-700 border border-gray-600"
           />
           <div className="flex flex-wrap gap-4">
             <Autocomplete
               label="OS"
-              value={filters.OS}
+              value={pendingFilters.OS}
               options={OSOptions.filter(Boolean)}
               placeholder="Search OS..."
-              onSelect={(val) => setFilters((f) => ({ ...f, OS: val }))}
+              onSelect={(val) => setPendingFilters((f) => ({ ...f, OS: val }))}
             />
             <Autocomplete
               label="CPU"
-              value={filters.cpu}
+              value={pendingFilters.cpu}
               options={cpuOptions.filter(Boolean)}
               placeholder="Search CPU..."
-              onSelect={(val) => setFilters((f) => ({ ...f, cpu: val }))}
+              onSelect={(val) => setPendingFilters((f) => ({ ...f, cpu: val }))}
             />
             <Autocomplete
               label="RAM"
-              value={filters.ram}
+              value={pendingFilters.ram}
               options={ramOptions.filter(Boolean)}
               placeholder="Search RAM..."
-              onSelect={(val) => setFilters((f) => ({ ...f, ram: val }))}
+              onSelect={(val) => setPendingFilters((f) => ({ ...f, ram: val }))}
               width="w-40"
             />
             <Autocomplete
               label="GPU"
-              value={filters.gpu}
+              value={pendingFilters.gpu}
               options={gpuOptions.filter(Boolean)}
               placeholder="Search GPU..."
-              onSelect={(val) => setFilters((f) => ({ ...f, gpu: val }))}
+              onSelect={(val) => setPendingFilters((f) => ({ ...f, gpu: val }))}
             />
+          </div>
+
+          {/* دکمه‌های اعمال و ریست */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setFilters(pendingFilters);
+                setSearchTerm(pendingSearch);
+              }}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Apply Filters
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPendingFilters(defaultFilters);
+                setPendingSearch("");
+                setFilters(defaultFilters);
+                setSearchTerm("");
+                setSelectedProgramId(null);
+              }}
+              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white"
+            >
+              Reset
+            </button>
           </div>
         </div>
 
