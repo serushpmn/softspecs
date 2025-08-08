@@ -92,7 +92,10 @@ export default function App() {
         { data: gpus, error: e2 },
         { data: rams, error: e3 },
       ] = await Promise.all([
-        supabase.from("os").select("id,name").order("name", { ascending: true }), // ← نام جدول OS خودت را بگذار
+        supabase
+          .from("os")
+          .select("id,name")
+          .order("name", { ascending: true }), // ← نام جدول OS خودت را بگذار
         supabase
           .from("cpus")
           .select("id,name,benchmark,rank")
@@ -195,27 +198,47 @@ export default function App() {
   // تابع کمکی برای حذف "or newer" و trim کردن
   const cleanOS = (os: string) => os.replace(/or newer/gi, "").trim();
 
+  // تابع کمکی: استخراج عدد RAM از name جدول rams یا از مقادیر برنامه‌ها
+  const parseRamNumber = (v: unknown): number => {
+    if (typeof v === "number") return v;
+    const m = String(v ?? "").match(/\d+/);
+    return m ? parseInt(m[0], 10) : NaN;
+  };
+
   // استخراج گزینه‌های یکتا برای فیلترهای آرایه‌ای با حذف "or newer"
   const OSOptions = [
     "",
-    ...(
-      osList.length
-        ? osList.map((o) => o.name)
-        : Array.from(
-            new Set(
-              programs
-                .flatMap((p) => (Array.isArray(p.OS) ? p.OS : [p.OS]))
-                .filter(Boolean)
-                .map(cleanOS)
-            )
+    ...(osList.length
+      ? osList.map((o) => o.name)
+      : Array.from(
+          new Set(
+            programs
+              .flatMap((p) => (Array.isArray(p.OS) ? p.OS : [p.OS]))
+              .filter(Boolean)
+              .map(cleanOS)
           )
-    ),
+        )),
   ];
 
-  // گزینه‌های فیلتر بر اساس جداول lookup
+  // گزینه‌های فیلتر بر اساس جداول lookup (مرتب‌سازی عددی RAM)
   const cpuOptions = ["", ...cpuList.map((c) => c.name)];
   const gpuOptions = ["", ...gpuList.map((g) => g.name)];
-  const ramOptions = ["", ...ramList.map((r) => r.name)];
+  const ramOptions = [
+    "",
+    ...Array.from(
+      new Set(
+        [
+          // از جدول rams
+          ...ramList.map((r) => parseRamNumber(r.name)),
+          // از داده‌های برنامه‌ها (در صورت نبود در جدول)
+          ...programs.map((p) => parseRamNumber(p.Ram_min)),
+          ...programs.map((p) => parseRamNumber(p.Ram_rec)),
+        ].filter((n) => Number.isFinite(n)) as number[]
+      )
+    )
+      .sort((a, b) => a - b)
+      .map((n) => String(n)),
+  ];
 
   // Filter the programs list based on search and filters
   const sortedPrograms = [...programs].sort((a, b) => {
@@ -400,7 +423,9 @@ export default function App() {
     <div className="bg-gray-900 min-h-screen text-gray-100 font-sans flex flex-col items-center p-4">
       <div className="container max-w-6xl mx-auto space-y-8">
         <header className="py-6 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold">Software Specs Finder</h1>
+          <h1 className="text-3xl md:text-4xl font-bold">
+            Software Specs Finder
+          </h1>
         </header>
 
         {/* Search + Filters */}
@@ -448,16 +473,39 @@ export default function App() {
         {/* Programs list */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPrograms.map((program) => (
-            <div key={program.id} className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+            <div
+              key={program.id}
+              className="bg-gray-800 p-6 rounded-xl border border-gray-700"
+            >
               <h3 className="text-lg font-semibold">
-                {program.name} <span className="text-gray-400">({program.version})</span>
+                {program.name}{" "}
+                <span className="text-gray-400">({program.version})</span>
               </h3>
               <div className="mt-3 text-sm space-y-2">
-                <div>OS: {Array.isArray(program.OS) ? program.OS.join(" / ") : program.OS}</div>
-                <div>CPU min: {Array.isArray(program.CPU_min) ? program.CPU_min.join(" / ") : program.CPU_min}</div>
-                <div>CPU rec: {Array.isArray(program.CPU_rec) ? program.CPU_rec.join(" / ") : program.CPU_rec}</div>
-                <div>RAM: {program.Ram_min} / {program.Ram_rec}</div>
-                <div>GPU: {program.GPU_min} / {program.GPU_rec}</div>
+                <div>
+                  OS:{" "}
+                  {Array.isArray(program.OS)
+                    ? program.OS.join(" / ")
+                    : program.OS}
+                </div>
+                <div>
+                  CPU min:{" "}
+                  {Array.isArray(program.CPU_min)
+                    ? program.CPU_min.join(" / ")
+                    : program.CPU_min}
+                </div>
+                <div>
+                  CPU rec:{" "}
+                  {Array.isArray(program.CPU_rec)
+                    ? program.CPU_rec.join(" / ")
+                    : program.CPU_rec}
+                </div>
+                <div>
+                  RAM: {program.Ram_min} / {program.Ram_rec}
+                </div>
+                <div>
+                  GPU: {program.GPU_min} / {program.GPU_rec}
+                </div>
                 <div>Disk: {program.Disk_space}</div>
               </div>
             </div>
