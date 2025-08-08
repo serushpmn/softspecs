@@ -829,17 +829,16 @@ export default function App() {
         </header>
 
         {/* Search + Filters */}
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 space-y-4">
-          {/* Search program به حالت Autocomplete */}
-
-          <div className="flex flex-wrap gap-4">
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border border-gray-700 shadow-lg space-y-6 w-full">
+          {/* فیلترهای انتخاب برنامه */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
             <Autocomplete
               label="Program"
               value={pendingSearch}
-              options={programNameOptions} // شامل گزینه خالی برای "Any"
+              options={programNameOptions}
               placeholder="Search program..."
               onSelect={(val) => setPendingSearch(val)}
-              width="w-60"
+              width="w-full"
             />
             <Autocomplete
               label="OS"
@@ -847,23 +846,21 @@ export default function App() {
               options={OSOptions}
               placeholder="Search OS..."
               onSelect={(val) => setPendingFilters((f) => ({ ...f, OS: val }))}
-              width="w-30"
+              width="w-full"
             />
-            {/* CPU: جستجوی سروری */}
             <AutocompleteServerSearch
               label="CPU"
               value={pendingFilters.cpu}
               onSelect={(val) => setPendingFilters((f) => ({ ...f, cpu: val }))}
               placeholder="Search CPU..."
-              width="w-30"
+              width="w-full"
             />
-            {/* GPU: جستجوی سروری */}
             <AutocompleteServerSearchGPU
               label="GPU"
               value={pendingFilters.gpu}
               onSelect={(val) => setPendingFilters((f) => ({ ...f, gpu: val }))}
               placeholder="Search GPU..."
-              width="w-30"
+              width="w-full"
             />
             <Autocomplete
               label="RAM"
@@ -871,21 +868,21 @@ export default function App() {
               options={ramOptions}
               placeholder="Search RAM..."
               onSelect={(val) => setPendingFilters((f) => ({ ...f, ram: val }))}
-              width="w-20"
+              width="w-full"
             />
           </div>
 
           {/* دکمه‌های اعمال و ریست */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-end">
             <button
               type="button"
               onClick={() => {
                 setFilters(pendingFilters);
                 setSearchTerm(pendingSearch);
               }}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white"
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 transition-colors duration-200 text-white font-semibold shadow-md w-full sm:w-auto"
             >
-              Apply Filters
+              ✅ Apply Filters
             </button>
             <button
               type="button"
@@ -896,9 +893,9 @@ export default function App() {
                 setSearchTerm("");
                 setSelectedProgramId(null);
               }}
-              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white"
+              className="px-5 py-2.5 rounded-xl bg-gray-600 hover:bg-gray-700 transition-colors duration-200 text-white font-semibold shadow-md w-full sm:w-auto"
             >
-              Reset
+              🔄 Reset
             </button>
           </div>
         </div>
