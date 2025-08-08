@@ -92,35 +92,45 @@ export default function App() {
     const loadLookups = async () => {
       const [
         { data: oses, error: e0 },
-        { data: cpus, error: e1 },
+        { data: cpus, error: e1, count: c1 },
         { data: gpus, error: e2 },
         { data: rams, error: e3 },
       ] = await Promise.all([
         supabase
           .from("os")
-          .select("id,name")
-          .order("name", { ascending: true }), // ← نام جدول OS خودت را بگذار
+          .select("id,name", { count: "exact" })
+          .order("name", { ascending: true })
+          .range(0, 9999),
         supabase
           .from("cpus")
-          .select("id,name,benchmark,rank")
-          .order("rank", { ascending: true }),
+          .select("id,name,benchmark,rank", { count: "exact" })
+          .order("rank", { ascending: true, nullsFirst: false })
+          .order("name", { ascending: true })
+          .range(0, 9999),
         supabase
           .from("gpus")
-          .select("id,name,benchmark,rank")
-          .order("rank", { ascending: true }),
+          .select("id,name,benchmark,rank", { count: "exact" })
+          .order("rank", { ascending: true, nullsFirst: false })
+          .order("name", { ascending: true })
+          .range(0, 9999),
         supabase
           .from("rams")
-          .select("id,name")
-          .order("name", { ascending: true }),
+          .select("id,name", { count: "exact" })
+          .order("name", { ascending: true })
+          .range(0, 9999),
       ]);
+
       if (e0) console.error("os error:", e0);
       if (e1) console.error("cpus error:", e1);
       if (e2) console.error("gpus error:", e2);
       if (e3) console.error("rams error:", e3);
+
       setOsList(oses || []);
       setCpuList(cpus || []);
       setGpuList(gpus || []);
       setRamList(rams || []);
+
+      console.log("cpus fetched:", cpus?.length, "count:", c1);
     };
     loadLookups();
   }, []);
@@ -225,7 +235,26 @@ export default function App() {
   ];
 
   // گزینه‌های فیلتر بر اساس جداول lookup (مرتب‌سازی عددی RAM)
-  const cpuOptions = ["", ...cpuList.map((c) => c.name)];
+  const cpuOptions = [
+    "",
+    ...Array.from(
+      new Set(
+        [
+          // از جدول cpus
+          ...cpuList.map((c) => c.name).filter(Boolean),
+          // از داده‌های برنامه‌ها (CPU_min/CPU_rec)
+          ...(programs
+            .flatMap((p) => {
+              const mins = Array.isArray(p.CPU_min) ? p.CPU_min : [p.CPU_min];
+              const recs = Array.isArray(p.CPU_rec) ? p.CPU_rec : [p.CPU_rec];
+              return [...mins, ...recs];
+            })
+            .filter(Boolean) as string[]),
+        ].map((s) => s.trim())
+      )
+    ).sort((a, b) => a.localeCompare(b)),
+  ];
+
   const gpuOptions = ["", ...gpuList.map((g) => g.name)];
   const ramOptions = [
     "",
@@ -370,6 +399,7 @@ export default function App() {
   }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState(value ?? "");
+    const [highlighted, setHighlighted] = useState<number>(-1);
     const ref = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => setQuery(value ?? ""), [value]);
@@ -383,12 +413,17 @@ export default function App() {
       return () => document.removeEventListener("mousedown", onDocClick);
     }, []);
 
-    const filtered = (options ?? []).filter((opt) =>
-      (opt ?? "").toLowerCase().includes((query ?? "").toLowerCase())
-    );
+    const filtered = (options ?? [])
+      .filter((opt) => opt?.toLowerCase().includes((query ?? "").toLowerCase()))
+      .slice(0, 50); // حداکثر 50 مورد
 
     // همیشه گزینه خالی را اول لیست بیاور
     const list = Array.from(new Set<string>(["", ...filtered]));
+
+    useEffect(() => {
+      // همواره ایندکس هایلایت در بازه معتبر
+      if (highlighted >= list.length) setHighlighted(list.length - 1);
+    }, [list.length, highlighted]);
 
     const labelOf = (opt: string) => (opt === "" ? "Any" : opt);
 
@@ -402,10 +437,32 @@ export default function App() {
             onChange={(e) => {
               setQuery(e.target.value);
               setOpen(true);
+              setHighlighted(-1);
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={(e) => {
-              if (e.key === "Escape") setOpen(false);
+              if (e.key === "Escape") {
+                setOpen(false);
+                return;
+              }
+              if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+                setOpen(true);
+                return;
+              }
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setHighlighted((i) => Math.min(i + 1, list.length - 1));
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHighlighted((i) => Math.max(i - 1, 0));
+              } else if (e.key === "Enter") {
+                if (open && highlighted >= 0 && highlighted < list.length) {
+                  const chosen = list[highlighted];
+                  onSelect(chosen);
+                  setQuery(chosen);
+                  setOpen(false);
+                }
+              }
             }}
             placeholder={placeholder}
             className="w-full pr-8 p-2 rounded-lg bg-gray-700 text-gray-100 placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -419,6 +476,7 @@ export default function App() {
                 onSelect("");
                 setQuery("");
                 setOpen(false);
+                setHighlighted(-1);
               }}
             >
               ×
@@ -427,20 +485,25 @@ export default function App() {
         </div>
 
         {open ? (
-          <div className="absolute z-20 mt-1 w-full max-h-56 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+          <div className="absolute z-20 mt-1 w-full max-h-80 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
             {list.length === 0 ? (
               <div className="px-3 py-2 text-gray-400 text-sm">No results</div>
             ) : (
-              list.map((opt) => (
+              list.map((opt, idx) => (
                 <div
                   key={opt || "__ANY__"}
-                  className={`px-3 py-2 cursor-pointer text-sm hover:bg-blue-600 hover:text-white ${
-                    opt === value ? "bg-blue-700 text-white" : ""
-                  }`}
+                  className={`px-3 py-2 cursor-pointer text-sm ${
+                    idx === highlighted
+                      ? "bg-blue-600 text-white"
+                      : "hover:bg-blue-600 hover:text-white"
+                  } ${opt === value ? "bg-blue-700 text-white" : ""}`}
+                  onMouseEnter={() => setHighlighted(idx)}
+                  onMouseLeave={() => setHighlighted(-1)}
                   onClick={() => {
                     onSelect(opt);
                     setQuery(opt);
                     setOpen(false);
+                    setHighlighted(-1);
                   }}
                 >
                   {labelOf(opt)}
@@ -449,6 +512,308 @@ export default function App() {
             )}
           </div>
         ) : null}
+      </div>
+    );
+  }
+
+  // جستجوی سروری CPU با debounce و ilike
+  function AutocompleteServerSearch({
+    label,
+    value,
+    onSelect,
+    placeholder = "",
+    width = "w-56",
+  }: {
+    label: string;
+    value: string;
+    onSelect: (val: string) => void;
+    placeholder?: string;
+    width?: string;
+  }) {
+    const [query, setQuery] = useState(value ?? "");
+    const [results, setResults] = useState<string[]>([]);
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [highlighted, setHighlighted] = useState<number>(-1);
+    const ref = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+      setQuery(value ?? "");
+    }, [value]);
+
+    useEffect(() => {
+      const onClickOutside = (e: MouseEvent) => {
+        if (ref.current && !ref.current.contains(e.target as Node))
+          setOpen(false);
+      };
+      document.addEventListener("mousedown", onClickOutside);
+      return () => document.removeEventListener("mousedown", onClickOutside);
+    }, []);
+
+    useEffect(() => {
+      const q = (query ?? "").trim();
+      const timer = setTimeout(() => {
+        if (q.length < 2) {
+          setResults([]);
+          return;
+        }
+        setLoading(true);
+        supabase
+          .from("cpus")
+          .select("name")
+          .ilike("name", `%${q}%`)
+          .order("name", { ascending: true })
+          .limit(50)
+          .then(({ data, error }) => {
+            setLoading(false);
+            if (error) {
+              console.error("CPU search error:", error);
+              setResults([]);
+            } else {
+              const uniq = Array.from(
+                new Set((data ?? []).map((d) => d.name))
+              ).sort((a, b) => a.localeCompare(b));
+              setResults(uniq);
+              setHighlighted(uniq.length ? 0 : -1);
+            }
+          });
+      }, 300);
+      return () => clearTimeout(timer);
+    }, [query]);
+
+    return (
+      <div className={`relative ${width}`} ref={ref}>
+        <label className="block text-xs text-gray-400 mb-1">{label}</label>
+        <input
+          type="text"
+          value={query}
+          placeholder={placeholder}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+            setHighlighted(-1);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setOpen(false);
+              return;
+            }
+            if (query.trim().length < 2) return;
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setHighlighted((i) => Math.min(i + 1, results.length - 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setHighlighted((i) => Math.max(i - 1, 0));
+            } else if (e.key === "Enter") {
+              if (open && highlighted >= 0 && highlighted < results.length) {
+                const chosen = results[highlighted];
+                onSelect(chosen);
+                setQuery(chosen);
+                setOpen(false);
+                setHighlighted(-1);
+              }
+            }
+          }}
+          className="w-full p-2 pr-8 rounded-lg bg-gray-700 text-gray-100 border border-gray-600"
+        />
+        {(value || query) && (
+          <button
+            type="button"
+            aria-label="Clear"
+            className="absolute right-2 top-7 -translate-y-1/2 text-gray-300 hover:text-white"
+            onClick={() => {
+              onSelect("");
+              setQuery("");
+              setOpen(false);
+              setHighlighted(-1);
+            }}
+          >
+            ×
+          </button>
+        )}
+
+        {open && query.trim().length >= 2 && (
+          <div className="absolute z-20 mt-1 w-full max-h-80 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+            {loading ? (
+              <div className="px-3 py-2 text-gray-400 text-sm">Loading...</div>
+            ) : results.length === 0 ? (
+              <div className="px-3 py-2 text-gray-400 text-sm">No results</div>
+            ) : (
+              results.map((opt, idx) => (
+                <div
+                  key={opt}
+                  className={`px-3 py-2 cursor-pointer text-sm ${
+                    idx === highlighted
+                      ? "bg-blue-600 text-white"
+                      : "hover:bg-blue-600 hover:text-white"
+                  } ${opt === value ? "bg-blue-700 text-white" : ""}`}
+                  onMouseEnter={() => setHighlighted(idx)}
+                  onMouseLeave={() => setHighlighted(-1)}
+                  onClick={() => {
+                    onSelect(opt);
+                    setQuery(opt);
+                    setOpen(false);
+                    setHighlighted(-1);
+                  }}
+                >
+                  {opt}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // جستجوی سروری GPU با debounce و ilike
+  function AutocompleteServerSearchGPU({
+    label,
+    value,
+    onSelect,
+    placeholder = "",
+    width = "w-56",
+  }: {
+    label: string;
+    value: string;
+    onSelect: (val: string) => void;
+    placeholder?: string;
+    width?: string;
+  }) {
+    const [query, setQuery] = useState(value ?? "");
+    const [results, setResults] = useState<string[]>([]);
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [highlighted, setHighlighted] = useState<number>(-1);
+    const ref = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => setQuery(value ?? ""), [value]);
+
+    useEffect(() => {
+      const onClickOutside = (e: MouseEvent) => {
+        if (ref.current && !ref.current.contains(e.target as Node))
+          setOpen(false);
+      };
+      document.addEventListener("mousedown", onClickOutside);
+      return () => document.removeEventListener("mousedown", onClickOutside);
+    }, []);
+
+    useEffect(() => {
+      const q = (query ?? "").trim();
+      const timer = setTimeout(() => {
+        if (q.length < 2) {
+          setResults([]);
+          return;
+        }
+        setLoading(true);
+        supabase
+          .from("gpus")
+          .select("name")
+          .ilike("name", `%${q}%`)
+          .order("name", { ascending: true })
+          .limit(50)
+          .then(({ data, error }) => {
+            setLoading(false);
+            if (error) {
+              console.error("GPU search error:", error);
+              setResults([]);
+            } else {
+              const uniq = Array.from(
+                new Set((data ?? []).map((d) => d.name))
+              ).sort((a, b) => a.localeCompare(b));
+              setResults(uniq);
+              setHighlighted(uniq.length ? 0 : -1);
+            }
+          });
+      }, 300);
+      return () => clearTimeout(timer);
+    }, [query]);
+
+    return (
+      <div className={`relative ${width}`} ref={ref}>
+        <label className="block text-xs text-gray-400 mb-1">{label}</label>
+        <input
+          type="text"
+          value={query}
+          placeholder={placeholder}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+            setHighlighted(-1);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setOpen(false);
+              return;
+            }
+            if (query.trim().length < 2) return;
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setHighlighted((i) => Math.min(i + 1, results.length - 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setHighlighted((i) => Math.max(i - 1, 0));
+            } else if (e.key === "Enter") {
+              if (open && highlighted >= 0 && highlighted < results.length) {
+                const chosen = results[highlighted];
+                onSelect(chosen);
+                setQuery(chosen);
+                setOpen(false);
+                setHighlighted(-1);
+              }
+            }
+          }}
+          className="w-full p-2 pr-8 rounded-lg bg-gray-700 text-gray-100 border border-gray-600"
+        />
+        {(value || query) && (
+          <button
+            type="button"
+            aria-label="Clear"
+            className="absolute right-2 top-7 -translate-y-1/2 text-gray-300 hover:text-white"
+            onClick={() => {
+              onSelect("");
+              setQuery("");
+              setOpen(false);
+              setHighlighted(-1);
+            }}
+          >
+            ×
+          </button>
+        )}
+
+        {open && query.trim().length >= 2 && (
+          <div className="absolute z-20 mt-1 w-full max-h-80 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+            {loading ? (
+              <div className="px-3 py-2 text-gray-400 text-sm">Loading...</div>
+            ) : results.length === 0 ? (
+              <div className="px-3 py-2 text-gray-400 text-sm">No results</div>
+            ) : (
+              results.map((opt, idx) => (
+                <div
+                  key={opt}
+                  className={`px-3 py-2 cursor-pointer text-sm ${
+                    idx === highlighted
+                      ? "bg-blue-600 text-white"
+                      : "hover:bg-blue-600 hover:text-white"
+                  } ${opt === value ? "bg-blue-700 text-white" : ""}`}
+                  onMouseEnter={() => setHighlighted(idx)}
+                  onMouseLeave={() => setHighlighted(-1)}
+                  onClick={() => {
+                    onSelect(opt);
+                    setQuery(opt);
+                    setOpen(false);
+                    setHighlighted(-1);
+                  }}
+                >
+                  {opt}
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -466,43 +831,47 @@ export default function App() {
         {/* Search + Filters */}
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 space-y-4">
           {/* Search program به حالت Autocomplete */}
-          <Autocomplete
-            label="Program"
-            value={pendingSearch}
-            options={programNameOptions} // شامل گزینه خالی برای "Any"
-            placeholder="Search program..."
-            onSelect={(val) => setPendingSearch(val)}
-            width="w-full"
-          />
+
           <div className="flex flex-wrap gap-4">
+            <Autocomplete
+              label="Program"
+              value={pendingSearch}
+              options={programNameOptions} // شامل گزینه خالی برای "Any"
+              placeholder="Search program..."
+              onSelect={(val) => setPendingSearch(val)}
+              width="w-60"
+            />
             <Autocomplete
               label="OS"
               value={pendingFilters.OS}
-              options={OSOptions} // خالی را حذف نکن
+              options={OSOptions}
               placeholder="Search OS..."
               onSelect={(val) => setPendingFilters((f) => ({ ...f, OS: val }))}
+              width="w-30"
             />
-            <Autocomplete
+            {/* CPU: جستجوی سروری */}
+            <AutocompleteServerSearch
               label="CPU"
               value={pendingFilters.cpu}
-              options={cpuOptions} // خالی را حذف نکن
-              placeholder="Search CPU..."
               onSelect={(val) => setPendingFilters((f) => ({ ...f, cpu: val }))}
+              placeholder="Search CPU..."
+              width="w-30"
+            />
+            {/* GPU: جستجوی سروری */}
+            <AutocompleteServerSearchGPU
+              label="GPU"
+              value={pendingFilters.gpu}
+              onSelect={(val) => setPendingFilters((f) => ({ ...f, gpu: val }))}
+              placeholder="Search GPU..."
+              width="w-30"
             />
             <Autocomplete
               label="RAM"
               value={pendingFilters.ram}
-              options={ramOptions} // خالی را حذف نکن
+              options={ramOptions}
               placeholder="Search RAM..."
               onSelect={(val) => setPendingFilters((f) => ({ ...f, ram: val }))}
-              width="w-40"
-            />
-            <Autocomplete
-              label="GPU"
-              value={pendingFilters.gpu}
-              options={gpuOptions} // خالی را حذف نکن
-              placeholder="Search GPU..."
-              onSelect={(val) => setPendingFilters((f) => ({ ...f, gpu: val }))}
+              width="w-20"
             />
           </div>
 
