@@ -8,17 +8,17 @@ interface Program {
   id: number;
   name: string;
   version: string;
-  OS: string[]; // آرایه
-  CPU_min: string[] | string; // ← allow string or array
-  CPU_rec: string[] | string; // ← allow string or array
-  Ram_min: string | number; // ← allow number from DB
-  Ram_rec: string | number; // ← allow number from DB
+  OS: string[] | string; // ← allow string or array
+  CPU_min: string[] | string;
+  CPU_rec: string[] | string;
+  Ram_min: string | number;
+  Ram_rec: string | number;
   GPU_min: string;
   GPU_rec: string;
-  Disk_space: string; // ← fix casing to match DB
+  Disk_space: string;
   is_free: boolean;
   is_open_source: boolean;
-  featured: boolean; // اضافه شد
+  featured: boolean;
 }
 
 interface Filters {
@@ -53,6 +53,10 @@ interface Ram {
   id: number;
   name: string;
 }
+interface Os {
+  id: number;
+  name: string;
+}
 
 // Main App Component
 export default function App() {
@@ -77,15 +81,18 @@ export default function App() {
   const [cpuList, setCpuList] = useState<Cpu[]>([]);
   const [gpuList, setGpuList] = useState<Gpu[]>([]);
   const [ramList, setRamList] = useState<Ram[]>([]);
+  const [osList, setOsList] = useState<Os[]>([]);
 
   // Load lookup tables (cpus/gpus/rams) for select options
   useEffect(() => {
     const loadLookups = async () => {
       const [
+        { data: oses, error: e0 },
         { data: cpus, error: e1 },
         { data: gpus, error: e2 },
         { data: rams, error: e3 },
       ] = await Promise.all([
+        supabase.from("os").select("id,name").order("name", { ascending: true }), // ← نام جدول OS خودت را بگذار
         supabase
           .from("cpus")
           .select("id,name,benchmark,rank")
@@ -99,9 +106,11 @@ export default function App() {
           .select("id,name")
           .order("name", { ascending: true }),
       ]);
+      if (e0) console.error("os error:", e0);
       if (e1) console.error("cpus error:", e1);
       if (e2) console.error("gpus error:", e2);
       if (e3) console.error("rams error:", e3);
+      setOsList(oses || []);
       setCpuList(cpus || []);
       setGpuList(gpus || []);
       setRamList(rams || []);
@@ -112,7 +121,9 @@ export default function App() {
   useEffect(() => {
     async function fetchPrograms() {
       const { data, error } = await supabase.from("programs").select("*");
-      if (!error && data) {
+      if (error) {
+        console.error("Supabase error:", error.message);
+      } else {
         setPrograms(data as Program[]);
         console.log("Fetched programs:", data); // این خط را اضافه کنید
       }
@@ -187,13 +198,17 @@ export default function App() {
   // استخراج گزینه‌های یکتا برای فیلترهای آرایه‌ای با حذف "or newer"
   const OSOptions = [
     "",
-    ...Array.from(
-      new Set(
-        programs
-          .flatMap((p) => (Array.isArray(p.OS) ? p.OS : [p.OS]))
-          .filter(Boolean)
-          .map(cleanOS)
-      )
+    ...(
+      osList.length
+        ? osList.map((o) => o.name)
+        : Array.from(
+            new Set(
+              programs
+                .flatMap((p) => (Array.isArray(p.OS) ? p.OS : [p.OS]))
+                .filter(Boolean)
+                .map(cleanOS)
+            )
+          )
     ),
   ];
 
@@ -290,11 +305,10 @@ export default function App() {
 
     if (!userRam || !userCores) return false;
 
-    const minRam = parseRam(program.Ram_min);
+    const minRam = parseRam(program.Ram_min as unknown as string);
 
-    // For simplicity, we'll assume CPU cores are a good proxy for performance.
-    // Extract number from CPU string like "Intel Core i5" -> 5, "1.6 GHz Dual Core" -> 2
-    const cpuMatch = program.CPU_min.match(/(\d+)/);
+    // ایمن‌سازی برای union type
+    const cpuMatch = String(program.CPU_min).match(/(\d+)/);
     const minCores = cpuMatch ? parseInt(cpuMatch[1]) : 1;
 
     const isCompatible = userRam >= minRam && userCores >= minCores;
@@ -379,192 +393,72 @@ export default function App() {
         )}
       </div>
     );
-  } // پایان تعریف کامپوننت Autocomplete
+  } // ← پایان تابع Autocomplete
 
+  // رندر اصلی صفحه
   return (
     <div className="bg-gray-900 min-h-screen text-gray-100 font-sans flex flex-col items-center p-4">
       <div className="container max-w-6xl mx-auto space-y-8">
         <header className="py-6 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400">
-            Software Specs Finder
-          </h1>
-          <p className="mt-2 text-lg text-gray-400">
-            Find system requirements for your favorite software.
-          </p>
+          <h1 className="text-3xl md:text-4xl font-bold">Software Specs Finder</h1>
         </header>
 
-        {/* Search and Filters */}
-        <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+        {/* Search + Filters */}
+        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 space-y-4">
           <input
             type="text"
-            placeholder="Search software..."
-            className="w-full p-3 mb-4 rounded-xl bg-gray-700 text-gray-100 placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={searchTerm}
+            placeholder="Search program..."
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-2 rounded-lg bg-gray-700 border border-gray-600"
           />
-          <div className="flex flex-wrap gap-4 justify-start">
-            {/* OS Search */}
+          <div className="flex flex-wrap gap-4">
             <Autocomplete
               label="OS"
               value={filters.OS}
               options={OSOptions.filter(Boolean)}
               placeholder="Search OS..."
               onSelect={(val) => setFilters((f) => ({ ...f, OS: val }))}
-              width="w-56"
             />
-            {/* CPU Search */}
             <Autocomplete
               label="CPU"
               value={filters.cpu}
               options={cpuOptions.filter(Boolean)}
               placeholder="Search CPU..."
               onSelect={(val) => setFilters((f) => ({ ...f, cpu: val }))}
-              width="w-56"
             />
-            {/* RAM Search */}
             <Autocomplete
               label="RAM"
               value={filters.ram}
               options={ramOptions.filter(Boolean)}
               placeholder="Search RAM..."
               onSelect={(val) => setFilters((f) => ({ ...f, ram: val }))}
-              width="w-44"
+              width="w-40"
             />
-            {/* GPU Search */}
             <Autocomplete
               label="GPU"
               value={filters.gpu}
               options={gpuOptions.filter(Boolean)}
               placeholder="Search GPU..."
               onSelect={(val) => setFilters((f) => ({ ...f, gpu: val }))}
-              width="w-56"
             />
           </div>
         </div>
 
-        {/* Programs List */}
+        {/* Programs list */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPrograms.map((program) => (
-            <div
-              key={program.id}
-              className={`bg-gray-800 p-6 rounded-xl shadow-lg border-2 cursor-pointer transition-all duration-200 ${
-                selectedProgramId === program.id
-                  ? "border-blue-500 scale-105"
-                  : "border-gray-700 hover:border-blue-500"
-              }`}
-              onClick={() => setSelectedProgramId(program.id)}
-            >
-              <h3 className="text-xl font-bold text-blue-400">
-                {program.name}{" "}
-                <span className="font-normal text-gray-400 text-lg">
-                  ({program.version})
-                </span>
+            <div key={program.id} className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+              <h3 className="text-lg font-semibold">
+                {program.name} <span className="text-gray-400">({program.version})</span>
               </h3>
-
-              <p className="text-md text-gray-300 mb-4">
-                {Array.isArray(program.OS)
-                  ? program.OS.join(" / ")
-                  : program.OS || "No OS specified"}
-              </p>
-
-              <div className="space-y-3 mt-4">
-                <p>
-                  <span className="font-semibold text-gray-300">CPU:</span>
-                  <br />
-                  <span className="text-gray-400 ml-4">
-                    min:
-                    <span className="text-gray-300 font-bold ml-2">
-                      {Array.isArray(program.CPU_min)
-                        ? program.CPU_min.length > 0
-                          ? program.CPU_min.join(" / ")
-                          : "Intel or AMD processor"
-                        : program.CPU_min || "Intel or AMD processor"}
-                    </span>
-                  </span>
-                  <br />
-                  <span className="text-gray-400 ml-4">
-                    Rec:
-                    <span className="text-gray-300 font-bold ml-2">
-                      {Array.isArray(program.CPU_rec)
-                        ? program.CPU_rec.length > 0
-                          ? program.CPU_rec.join(" / ")
-                          : "Intel or AMD processor with 64-bit support"
-                        : program.CPU_rec ||
-                          "Intel or AMD processor with 64-bit support"}
-                    </span>
-                  </span>
-                </p>
-
-                <p>
-                  <span className="font-semibold text-gray-300">RAM:</span>
-                  <br />
-                  <span className="text-gray-400 ml-4">
-                    min:
-                    <span className="text-gray-300 font-bold ml-2">
-                      {program.Ram_min}
-                    </span>
-                  </span>
-                  <br />
-                  <span className="text-gray-400 ml-4">
-                    Rec:
-                    <span className="text-gray-300 font-bold ml-2">
-                      {program.Ram_rec}
-                    </span>
-                  </span>
-                </p>
-
-                <p>
-                  <span className="font-semibold text-gray-300">GPU:</span>
-                  <br />
-                  <span className="text-gray-400 ml-4">
-                    min:
-                    <span className="text-gray-300 font-bold ml-2">
-                      {program.GPU_min}
-                    </span>
-                  </span>
-                  <br />
-                  <span className="text-gray-400 ml-4">
-                    Rec:
-                    <span className="text-gray-300 font-bold ml-2">
-                      {program.GPU_rec}
-                    </span>
-                  </span>
-                </p>
-
-                <p>
-                  <span className="font-semibold text-gray-300">
-                    Disk Space:
-                  </span>
-                  <br />
-                  <span className="text-gray-400 font-semibold ml-4">
-                    {program.Disk_space}
-                  </span>
-                </p>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {program.is_free && (
-                  <span className="bg-green-600 text-white px-3 py-1 text-xs rounded-full font-medium">
-                    Free
-                  </span>
-                )}
-                {program.is_open_source && (
-                  <span className="bg-purple-600 text-white px-3 py-1 text-xs rounded-full font-medium">
-                    Open Source
-                  </span>
-                )}
-                {!program.is_free && !program.is_open_source && (
-                  <span className="bg-orange-600 text-white px-3 py-1 text-xs rounded-full font-medium">
-                    Paid
-                  </span>
-                )}
-                {program.featured && (
-                  <div className="flex justify-end mt-2 ml-auto">
-                    <span title="Featured" className="text-yellow-400 text-2xl">
-                      ★
-                    </span>
-                  </div>
-                )}
+              <div className="mt-3 text-sm space-y-2">
+                <div>OS: {Array.isArray(program.OS) ? program.OS.join(" / ") : program.OS}</div>
+                <div>CPU min: {Array.isArray(program.CPU_min) ? program.CPU_min.join(" / ") : program.CPU_min}</div>
+                <div>CPU rec: {Array.isArray(program.CPU_rec) ? program.CPU_rec.join(" / ") : program.CPU_rec}</div>
+                <div>RAM: {program.Ram_min} / {program.Ram_rec}</div>
+                <div>GPU: {program.GPU_min} / {program.GPU_rec}</div>
+                <div>Disk: {program.Disk_space}</div>
               </div>
             </div>
           ))}
@@ -572,4 +466,4 @@ export default function App() {
       </div>
     </div>
   );
-}
+} // ← پایان کامپوننت App
