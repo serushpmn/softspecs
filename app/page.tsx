@@ -472,7 +472,7 @@ export default function App() {
             options={programNameOptions} // شامل گزینه خالی برای "Any"
             placeholder="Search program..."
             onSelect={(val) => setPendingSearch(val)}
-            width="w-72"
+            width="w-full"
           />
           <div className="flex flex-wrap gap-4">
             <Autocomplete
@@ -539,38 +539,70 @@ export default function App() {
           {filteredPrograms.map((program) => (
             <div
               key={program.id}
-              className="bg-gray-800 p-6 rounded-xl border border-gray-700"
+              className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border border-gray-700 shadow-md hover:shadow-xl transition-all duration-300"
             >
-              <h3 className="text-lg font-semibold">
+              <h3 className="text-xl font-bold text-white">
                 {program.name}{" "}
-                <span className="text-gray-400">({program.version})</span>
+                <span className="text-sm text-gray-400 font-normal">
+                  ({program.version})
+                </span>
               </h3>
-              <div className="mt-3 text-sm space-y-2">
+
+              <div className="mt-4 text-sm text-gray-300 space-y-2 leading-relaxed">
                 <div>
-                  OS:{" "}
-                  {Array.isArray(program.OS)
-                    ? program.OS.join(" / ")
-                    : program.OS}
+                  <span className="font-semibold text-blue-400">OS:</span>{" "}
+                  <span className="text-white">
+                    {Array.isArray(program.OS)
+                      ? program.OS.join(" / ")
+                      : program.OS}
+                  </span>
                 </div>
+
                 <div>
-                  CPU min:{" "}
-                  {Array.isArray(program.CPU_min)
-                    ? program.CPU_min.join(" / ")
-                    : program.CPU_min}
+                  <span className="font-semibold text-purple-400">
+                    CPU min:
+                  </span>{" "}
+                  <span className="text-white">
+                    {Array.isArray(program.CPU_min)
+                      ? program.CPU_min.join(" / ")
+                      : program.CPU_min}
+                  </span>
                 </div>
+
                 <div>
-                  CPU rec:{" "}
-                  {Array.isArray(program.CPU_rec)
-                    ? program.CPU_rec.join(" / ")
-                    : program.CPU_rec}
+                  <span className="font-semibold text-purple-300">
+                    CPU rec:
+                  </span>{" "}
+                  <span className="text-white">
+                    {Array.isArray(program.CPU_rec)
+                      ? program.CPU_rec.join(" / ")
+                      : program.CPU_rec}
+                  </span>
                 </div>
+
                 <div>
-                  RAM: {program.Ram_min} / {program.Ram_rec}
+                  <span className="font-semibold text-pink-400">RAM:</span>{" "}
+                  <span className="text-white">
+                    {program.Ram_min} GB{" "}
+                    <span className="text-gray-500">/</span> {program.Ram_rec}{" "}
+                    GB
+                  </span>
                 </div>
+
                 <div>
-                  GPU: {program.GPU_min} / {program.GPU_rec}
+                  <span className="font-semibold text-green-400">GPU min:</span>{" "}
+                  <span className="text-white">{program.GPU_min}</span>
                 </div>
-                <div>Disk: {program.Disk_space}</div>
+
+                <div>
+                  <span className="font-semibold text-green-300">GPU rec:</span>{" "}
+                  <span className="text-white">{program.GPU_rec}</span>
+                </div>
+
+                <div>
+                  <span className="font-semibold text-yellow-400">Disk:</span>{" "}
+                  <span className="text-white">{program.Disk_Space}</span>
+                </div>
               </div>
             </div>
           ))}
