@@ -232,9 +232,7 @@ export default function App() {
     ...Array.from(
       new Set(
         [
-          // از جدول rams
           ...ramList.map((r) => parseRamNumber(r.name)),
-          // از داده‌های برنامه‌ها (در صورت نبود در جدول)
           ...programs.map((p) => parseRamNumber(p.Ram_min)),
           ...programs.map((p) => parseRamNumber(p.Ram_rec)),
         ].filter((n) => Number.isFinite(n)) as number[]
@@ -242,6 +240,14 @@ export default function App() {
     )
       .sort((a, b) => a - b)
       .map((n) => String(n)),
+  ];
+
+  // لیست یکتای نام برنامه‌ها (بدون نسخه) برای سرچ برنامه
+  const programNameOptions = [
+    "",
+    ...Array.from(new Set(programs.map((p) => p.name))).sort((a, b) =>
+      a.localeCompare(b)
+    ),
   ];
 
   // Filter the programs list based on search and filters
@@ -363,10 +369,10 @@ export default function App() {
     width?: string;
   }) {
     const [open, setOpen] = useState(false);
-    const [query, setQuery] = useState(value || "");
+    const [query, setQuery] = useState(value ?? "");
     const ref = useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => setQuery(value || ""), [value]);
+    useEffect(() => setQuery(value ?? ""), [value]);
 
     useEffect(() => {
       const onDocClick = (e: MouseEvent) => {
@@ -377,12 +383,12 @@ export default function App() {
       return () => document.removeEventListener("mousedown", onDocClick);
     }, []);
 
-    const filtered = options
-      // حذف نکن! باید گزینه خالی ("") باقی بماند
-      .filter((opt) => opt.toLowerCase().includes(query.toLowerCase()));
+    const filtered = (options ?? []).filter((opt) =>
+      (opt ?? "").toLowerCase().includes((query ?? "").toLowerCase())
+    );
 
     // همیشه گزینه خالی را اول لیست بیاور
-    const list = Array.from(new Set(["", ...filtered]));
+    const list = Array.from(new Set<string>(["", ...filtered]));
 
     const labelOf = (opt: string) => (opt === "" ? "Any" : opt);
 
@@ -404,7 +410,7 @@ export default function App() {
             placeholder={placeholder}
             className="w-full pr-8 p-2 rounded-lg bg-gray-700 text-gray-100 placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          {(value || query) && (
+          {value || query ? (
             <button
               type="button"
               aria-label="Clear"
@@ -417,9 +423,10 @@ export default function App() {
             >
               ×
             </button>
-          )}
+          ) : null}
         </div>
-        {open && (
+
+        {open ? (
           <div className="absolute z-20 mt-1 w-full max-h-56 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
             {list.length === 0 ? (
               <div className="px-3 py-2 text-gray-400 text-sm">No results</div>
@@ -441,7 +448,7 @@ export default function App() {
               ))
             )}
           </div>
-        )}
+        ) : null}
       </div>
     );
   }
@@ -458,32 +465,34 @@ export default function App() {
 
         {/* Search + Filters */}
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 space-y-4">
-          <input
-            type="text"
+          {/* Search program به حالت Autocomplete */}
+          <Autocomplete
+            label="Program"
             value={pendingSearch}
+            options={programNameOptions} // شامل گزینه خالی برای "Any"
             placeholder="Search program..."
-            onChange={(e) => setPendingSearch(e.target.value)}
-            className="w-full p-2 rounded-lg bg-gray-700 border border-gray-600"
+            onSelect={(val) => setPendingSearch(val)}
+            width="w-72"
           />
           <div className="flex flex-wrap gap-4">
             <Autocomplete
               label="OS"
               value={pendingFilters.OS}
-              options={OSOptions.filter(Boolean)}
+              options={OSOptions} // خالی را حذف نکن
               placeholder="Search OS..."
               onSelect={(val) => setPendingFilters((f) => ({ ...f, OS: val }))}
             />
             <Autocomplete
               label="CPU"
               value={pendingFilters.cpu}
-              options={cpuOptions.filter(Boolean)}
+              options={cpuOptions} // خالی را حذف نکن
               placeholder="Search CPU..."
               onSelect={(val) => setPendingFilters((f) => ({ ...f, cpu: val }))}
             />
             <Autocomplete
               label="RAM"
               value={pendingFilters.ram}
-              options={ramOptions.filter(Boolean)}
+              options={ramOptions} // خالی را حذف نکن
               placeholder="Search RAM..."
               onSelect={(val) => setPendingFilters((f) => ({ ...f, ram: val }))}
               width="w-40"
@@ -491,7 +500,7 @@ export default function App() {
             <Autocomplete
               label="GPU"
               value={pendingFilters.gpu}
-              options={gpuOptions.filter(Boolean)}
+              options={gpuOptions} // خالی را حذف نکن
               placeholder="Search GPU..."
               onSelect={(val) => setPendingFilters((f) => ({ ...f, gpu: val }))}
             />
