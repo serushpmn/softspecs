@@ -9,13 +9,13 @@ interface Program {
   name: string;
   version: string;
   OS: string[]; // آرایه
-  CPU_min: string[]; // آرایه
-  CPU_rec: string[];
-  Ram_min: string;
-  Ram_rec: string;
+  CPU_min: string[] | string;   // ← allow string or array
+  CPU_rec: string[] | string;   // ← allow string or array
+  Ram_min: string | number;     // ← allow number from DB
+  Ram_rec: string | number;     // ← allow number from DB
   GPU_min: string;
   GPU_rec: string;
-  Disk_Space: string;
+  Disk_space: string;           // ← fix casing to match DB
   is_free: boolean;
   is_open_source: boolean;
   featured: boolean; // اضافه شد
@@ -34,6 +34,24 @@ interface Filters {
 interface UserSpecs {
   ram: string;
   cpuCores: string;
+}
+
+// تعریف مدل‌های جدید
+interface Cpu {
+  id: number;
+  name: string;
+  benchmark: number | null;
+  rank: number | null;
+}
+interface Gpu {
+  id: number;
+  name: string;
+  benchmark: number | null;
+  rank: number | null;
+}
+interface Ram {
+  id: number;
+  name: string;
 }
 
 // Main App Component
@@ -56,6 +74,28 @@ export default function App() {
   const [selectedProgramId, setSelectedProgramId] = useState<number | null>(
     null
   );
+  const [cpuList, setCpuList] = useState<Cpu[]>([]);
+  const [gpuList, setGpuList] = useState<Gpu[]>([]);
+  const [ramList, setRamList] = useState<Ram[]>([]);
+
+  // Load lookup tables (cpus/gpus/rams) for select options
+  useEffect(() => {
+    const loadLookups = async () => {
+      const [{ data: cpus, error: e1 }, { data: gpus, error: e2 }, { data: rams, error: e3 }] =
+        await Promise.all([
+          supabase.from("cpus").select("id,name,benchmark,rank").order("rank", { ascending: true }),
+          supabase.from("gpus").select("id,name,benchmark,rank").order("rank", { ascending: true }),
+          supabase.from("rams").select("id,name").order("name", { ascending: true }),
+        ]);
+      if (e1) console.error("cpus error:", e1);
+      if (e2) console.error("gpus error:", e2);
+      if (e3) console.error("rams error:", e3);
+      setCpuList(cpus || []);
+      setGpuList(gpus || []);
+      setRamList(rams || []);
+    };
+    loadLookups();
+  }, []);
 
   useEffect(() => {
     async function fetchPrograms() {
@@ -83,6 +123,46 @@ export default function App() {
     testConnection();
   }, []);
 
+  useEffect(() => {
+    async function testRelations() {
+      // توجه: اگر نام‌های FK متفاوت است، آن‌ها را اصلاح کن
+      const { data, error } = await supabase
+        .from("programs")
+        .select(
+          `
+        id,name,version,OS,Disk_space,category,
+        cpu_min:cpus!programs_cpu_min_id_fkey (id,name,benchmark,rank),
+        cpu_rec:cpus!programs_cpu_rec_id_fkey (id,name,benchmark,rank),
+        gpu_min:gpus!programs_gpu_min_id_fkey (id,name,benchmark,rank),
+        gpu_rec:gpus!programs_gpu_rec_id_fkey (id,name,benchmark,rank),
+        ram_min:rams!programs_ram_min_id_fkey (id,name),
+        ram_rec:rams!programs_ram_rec_id_fkey (id,name)
+      `
+        )
+        .limit(3);
+
+      if (error) {
+        console.error("Relation test error:", error);
+        return;
+      }
+      console.log("Relation test sample:", data);
+
+      // چند بررسی ساده
+      const ok = (data ?? []).every(
+        (p: any) =>
+          p.name &&
+          p.cpu_min?.name &&
+          p.cpu_rec?.name &&
+          p.gpu_min?.name &&
+          p.gpu_rec?.name &&
+          p.ram_min?.name &&
+          p.ram_rec?.name
+      );
+      console.log("All relations resolved:", ok);
+    }
+    testRelations();
+  }, []);
+
   // A helper function to parse ram string like "8 GB" to integer 8
   const parseRam = (ramStr: string): number => {
     const match = ramStr.match(/(\d+)\s*GB/);
@@ -105,26 +185,10 @@ export default function App() {
     ),
   ];
 
-  const cpuOptions = [
-    "",
-    ...Array.from(
-      new Set(
-        programs
-          .flatMap((p) => (Array.isArray(p.CPU_min) ? p.CPU_min : [p.CPU_min]))
-          .filter(Boolean)
-      )
-    ),
-  ];
-
-  const ramOptions = [
-    "",
-    ...Array.from(new Set(programs.map((p) => p.Ram_min).filter(Boolean))),
-  ];
-
-  const gpuOptions = [
-    "",
-    ...Array.from(new Set(programs.map((p) => p.GPU_min).filter(Boolean))),
-  ];
+  // گزینه‌های فیلتر بر اساس جداول lookup
+  const cpuOptions = ["", ...cpuList.map((c) => c.name)];
+  const gpuOptions = ["", ...gpuList.map((g) => g.name)];
+  const ramOptions = ["", ...ramList.map((r) => r.name)];
 
   // Filter the programs list based on search and filters
   const sortedPrograms = [...programs].sort((a, b) => {
@@ -153,34 +217,47 @@ export default function App() {
     const matchesCPU =
       !filters.cpu ||
       (Array.isArray(program.CPU_min)
-        ? program.CPU_min.some((cpu) =>
-            cpu.toLowerCase().includes(filters.cpu.toLowerCase())
-          )
-        : program.CPU_min &&
-          program.CPU_min.toLowerCase().includes(filters.cpu.toLowerCase()));
+        ? program.CPU_min.some((v) =>
+            v?.toLowerCase().includes(filters.cpu.toLowerCase())
+          ) ||
+          (Array.isArray(program.CPU_rec)
+            ? program.CPU_rec.some((v) =>
+                v?.toLowerCase().includes(filters.cpu.toLowerCase())
+              )
+            : (program.CPU_rec as unknown as string)
+                ?.toLowerCase?.()
+                .includes(filters.cpu.toLowerCase()))
+        : (program.CPU_min as unknown as string)
+            ?.toLowerCase?.()
+            .includes(filters.cpu.toLowerCase()) ||
+          (program.CPU_rec as unknown as string)
+            ?.toLowerCase?.()
+            .includes(filters.cpu.toLowerCase()));
 
-    // فیلتر GPU
     const matchesGPU =
       !filters.gpu ||
-      (program.GPU_min &&
-        program.GPU_min.toLowerCase().includes(filters.gpu.toLowerCase()));
+      program.GPU_min?.toLowerCase().includes(filters.gpu.toLowerCase()) ||
+      program.GPU_rec?.toLowerCase().includes(filters.gpu.toLowerCase());
 
-    // فیلتر RAM
+    const parseRam = (s: string) => {
+      const m = String(s).match(/(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    };
+    const selRam = parseRam(filters.ram);
+    const progMinRam = parseRam(program.Ram_min as unknown as string);
+    const progRecRam = parseRam(program.Ram_rec as unknown as string);
     const matchesRAM =
-      !filters.ram || parseRam(program.Ram_min) <= parseRam(filters.ram);
-
-    // فیلتر رایگان و متن‌باز
-    const matchesTags =
-      (!filters.isFree || program.is_free) &&
-      (!filters.isOpenSource || program.is_open_source);
+      !filters.ram ||
+      selRam === 0 ||
+      progMinRam === selRam ||
+      progRecRam === selRam;
 
     return (
       matchesSearch &&
       matchesOS &&
       matchesCPU &&
       matchesGPU &&
-      matchesRAM &&
-      matchesTags
+      matchesRAM /* + سایر فیلترها */
     );
   });
 
@@ -238,7 +315,7 @@ export default function App() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <div className="flex flex-wrap gap-4 justify-start">
-            {/* OS Filter */}
+            {/* OS Filter - موجود */}
             <select
               name="OS"
               onChange={handleFilterChange}
@@ -293,35 +370,6 @@ export default function App() {
                 </option>
               ))}
             </select>
-
-            {/* Tags as Buttons */}
-            <button
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                filters.isFree
-                  ? "bg-green-600 text-white shadow-md"
-                  : "bg-gray-700 text-gray-300 hover:bg-green-500 hover:text-white"
-              }`}
-              onClick={() =>
-                setFilters((prev) => ({ ...prev, isFree: !prev.isFree }))
-              }
-            >
-              Free
-            </button>
-            <button
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                filters.isOpenSource
-                  ? "bg-purple-600 text-white shadow-md"
-                  : "bg-gray-700 text-gray-300 hover:bg-purple-500 hover:text-white"
-              }`}
-              onClick={() =>
-                setFilters((prev) => ({
-                  ...prev,
-                  isOpenSource: !prev.isOpenSource,
-                }))
-              }
-            >
-              Open Source
-            </button>
           </div>
         </div>
 
@@ -421,7 +469,7 @@ export default function App() {
                   </span>
                   <br />
                   <span className="text-gray-400 font-semibold ml-4">
-                    {program.Disk_Space}
+                    {program.Disk_space}  {/* ← use Disk_space (matches DB) */}
                   </span>
                 </p>
               </div>
@@ -447,7 +495,7 @@ export default function App() {
               {/* ستاره برای featured */}
               {program.featured && (
                 <div className="flex justify-end mt-2">
-                  <span title="Featured" className="text-yellow-400 text-xl">
+                  <span title="Featured" className="text-yellow-400 text-2xl">
                     ★
                   </span>
                 </div>
