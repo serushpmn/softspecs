@@ -7,19 +7,18 @@ import { supabase } from "../lib/supabaseClient";
 interface Program {
   id: number;
   name: string;
-  version: string;
-  OS: string[] | string;
-  CPU_min: string[] | string;
-  CPU_rec: string[] | string;
-  Ram_min: string | number;
-  Ram_rec: string | number;
-  GPU_min: string;
-  GPU_rec: string;
-  Disk_space: string;
-  is_free: boolean;
-  is_open_source: boolean;
-  featured: boolean;
-  category?: string[];
+  version?: string;
+  os?: string; // stringified JSON
+  cpu_min_name?: string;
+  cpu_min_bench?: number | null;
+  gpu_min_name?: string;
+  gpu_min_bench?: number | null;
+  ram_min?: string;
+  ram_min_gb?: number | null;
+  disk_space?: string;
+  is_free?: boolean;
+  is_open_source?: boolean;
+  featured?: boolean;
 }
 
 interface Filters {
@@ -71,6 +70,8 @@ export default function App() {
   };
 
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [userSpecs, setUserSpecs] = useState<UserSpecs>({
@@ -135,18 +136,29 @@ export default function App() {
     loadLookups();
   }, []);
 
+  // Always fetch programs using the new RPC function, even if all filters are empty
   useEffect(() => {
-    async function fetchPrograms() {
-      const { data, error } = await supabase.from("programs").select("*");
-      if (error) {
-        console.error("Supabase error:", error.message);
-      } else {
-        setPrograms(data as Program[]);
-        console.log("Fetched programs:", data); // این خط را اضافه کنید
-      }
-    }
-    fetchPrograms();
-  }, []);
+    setLoading(true);
+    setErrorMsg("");
+    const params: any = {
+      user_cpu_name: filters.cpu || null,
+      user_gpu_name: filters.gpu || null,
+      user_ram: filters.ram ? parseInt(filters.ram) : null,
+      os_name: filters.OS || null,
+      program_name: searchTerm || null,
+    };
+    supabase
+      .rpc("programs_by_user_specs", params)
+      .then(({ data, error }: { data: any; error: any }) => {
+        setLoading(false);
+        if (error) {
+          setErrorMsg(error.message);
+          setPrograms([]);
+        } else {
+          setPrograms((data || []) as Program[]);
+        }
+      });
+  }, [filters.cpu, filters.gpu, filters.ram, filters.OS, searchTerm]);
 
   useEffect(() => {
     async function testConnection() {
@@ -228,7 +240,7 @@ export default function App() {
           new Set(
             programs
               .flatMap((p) => (Array.isArray(p.OS) ? p.OS : [p.OS]))
-              .filter(Boolean)
+              .filter((os): os is string => typeof os === "string" && !!os)
               .map(cleanOS)
           )
         )),
@@ -279,76 +291,8 @@ export default function App() {
     ),
   ];
 
-  // Filter the programs list based on search and filters
-  const sortedPrograms = [...programs].sort((a, b) => {
-    // ابتدا featured=true، سپس بقیه
-    if (a.featured === b.featured) return 0;
-    return a.featured ? -1 : 1;
-  });
-
-  const filteredPrograms = sortedPrograms.filter((program) => {
-    // جستجو بر اساس نام
-    const matchesSearch =
-      !searchTerm ||
-      program.name.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // فیلتر سیستم عامل
-    const matchesOS =
-      !filters.OS ||
-      (Array.isArray(program.OS)
-        ? program.OS.some((os) =>
-            os.toLowerCase().includes(filters.OS.toLowerCase())
-          )
-        : program.OS &&
-          program.OS.toLowerCase().includes(filters.OS.toLowerCase()));
-
-    // فیلتر CPU
-    const matchesCPU =
-      !filters.cpu ||
-      (Array.isArray(program.CPU_min)
-        ? program.CPU_min.some((v) =>
-            v?.toLowerCase().includes(filters.cpu.toLowerCase())
-          ) ||
-          (Array.isArray(program.CPU_rec)
-            ? program.CPU_rec.some((v) =>
-                v?.toLowerCase().includes(filters.cpu.toLowerCase())
-              )
-            : (program.CPU_rec as unknown as string)
-                ?.toLowerCase?.()
-                .includes(filters.cpu.toLowerCase()))
-        : (program.CPU_min as unknown as string)
-            ?.toLowerCase?.()
-            .includes(filters.cpu.toLowerCase()) ||
-          (program.CPU_rec as unknown as string)
-            ?.toLowerCase?.()
-            .includes(filters.cpu.toLowerCase()));
-
-    const matchesGPU =
-      !filters.gpu ||
-      program.GPU_min?.toLowerCase().includes(filters.gpu.toLowerCase()) ||
-      program.GPU_rec?.toLowerCase().includes(filters.gpu.toLowerCase());
-
-    const parseRam = (s: string) => {
-      const m = String(s).match(/(\d+)/);
-      return m ? parseInt(m[1], 10) : 0;
-    };
-    const selRam = parseRam(filters.ram);
-    const progMinRam = parseRam(program.Ram_min as unknown as string);
-    const progRecRam = parseRam(program.Ram_rec as unknown as string);
-    const matchesRAM =
-      !filters.ram ||
-      selRam === 0 ||
-      progMinRam === selRam ||
-      progRecRam === selRam;
-
-    return (
-      matchesSearch &&
-      matchesOS &&
-      matchesCPU &&
-      matchesGPU &&
-      matchesRAM /* + سایر فیلترها */
-    );
-  });
+  // Programs are now fetched from the server, no client-side filtering
+  const filteredPrograms = programs;
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -564,14 +508,18 @@ export default function App() {
           .ilike("name", `%${q}%`)
           .order("name", { ascending: true })
           .limit(50)
-          .then(({ data, error }) => {
+          .then(({ data, error }: { data: any; error: any }) => {
             setLoading(false);
             if (error) {
               console.error("CPU search error:", error);
               setResults([]);
             } else {
-              const uniq = Array.from(
-                new Set((data ?? []).map((d) => d.name))
+              const uniq: string[] = Array.from(
+                new Set(
+                  ((data ?? []) as { name: string }[])
+                    .map((d) => d.name)
+                    .filter((n): n is string => typeof n === "string" && !!n)
+                )
               ).sort((a, b) => a.localeCompare(b));
               setResults(uniq);
               setHighlighted(uniq.length ? 0 : -1);
@@ -714,14 +662,18 @@ export default function App() {
           .ilike("name", `%${q}%`)
           .order("name", { ascending: true })
           .limit(50)
-          .then(({ data, error }) => {
+          .then(({ data, error }: { data: any; error: any }) => {
             setLoading(false);
             if (error) {
               console.error("GPU search error:", error);
               setResults([]);
             } else {
-              const uniq = Array.from(
-                new Set((data ?? []).map((d) => d.name))
+              const uniq: string[] = Array.from(
+                new Set(
+                  ((data ?? []) as { name: string }[])
+                    .map((d) => d.name)
+                    .filter((n): n is string => typeof n === "string" && !!n)
+                )
               ).sort((a, b) => a.localeCompare(b));
               setResults(uniq);
               setHighlighted(uniq.length ? 0 : -1);
@@ -902,76 +854,105 @@ export default function App() {
 
         {/* Programs list */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPrograms.map((program) => (
-            <div
-              key={program.id}
-              className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border border-gray-700 shadow-md hover:shadow-xl transition-all duration-300"
-            >
-              <h3 className="text-xl font-bold text-white">
-                {program.name}{" "}
-                <span className="text-sm text-gray-400 font-normal">
-                  ({program.version})
-                </span>
-              </h3>
-
-              <div className="mt-4 text-sm text-gray-300 space-y-2 leading-relaxed">
-                <div>
-                  <span className="font-semibold text-blue-400">OS:</span>{" "}
-                  <span className="text-white">
-                    {Array.isArray(program.OS)
-                      ? program.OS.join(" / ")
-                      : program.OS}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="font-semibold text-purple-400">
-                    CPU min:
-                  </span>{" "}
-                  <span className="text-white">
-                    {Array.isArray(program.CPU_min)
-                      ? program.CPU_min.join(" / ")
-                      : program.CPU_min}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="font-semibold text-purple-300">
-                    CPU rec:
-                  </span>{" "}
-                  <span className="text-white">
-                    {Array.isArray(program.CPU_rec)
-                      ? program.CPU_rec.join(" / ")
-                      : program.CPU_rec}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="font-semibold text-pink-400">RAM:</span>{" "}
-                  <span className="text-white">
-                    {program.Ram_min} GB{" "}
-                    <span className="text-gray-500">/</span> {program.Ram_rec}{" "}
-                    GB
-                  </span>
-                </div>
-
-                <div>
-                  <span className="font-semibold text-green-400">GPU min:</span>{" "}
-                  <span className="text-white">{program.GPU_min}</span>
-                </div>
-
-                <div>
-                  <span className="font-semibold text-green-300">GPU rec:</span>{" "}
-                  <span className="text-white">{program.GPU_rec}</span>
-                </div>
-
-                <div>
-                  <span className="font-semibold text-yellow-400">Disk:</span>{" "}
-                  <span className="text-white">{program.Disk_Space}</span>
+          {loading ? (
+            <div className="col-span-full text-center py-8 text-lg text-blue-400">
+              Loading...
+            </div>
+          ) : errorMsg ? (
+            <div className="col-span-full text-center py-8 text-lg text-red-400">
+              {errorMsg}
+            </div>
+          ) : filteredPrograms.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-lg text-gray-400">
+              No programs found.
+            </div>
+          ) : (
+            filteredPrograms.map((program) => (
+              <div
+                key={program.id}
+                className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border border-gray-700 shadow-md hover:shadow-xl transition-all duration-300"
+              >
+                <h3 className="text-xl font-bold text-white">
+                  {program.name}{" "}
+                  {program.version ? (
+                    <span className="text-sm text-gray-400 font-normal">
+                      ({program.version})
+                    </span>
+                  ) : null}
+                </h3>
+                <div className="mt-4 text-sm text-gray-300 space-y-2 leading-relaxed">
+                  {/* OS readable display */}
+                  {program.os && (
+                    <div>
+                      <span className="font-semibold text-blue-400">OS:</span>{" "}
+                      <span className="text-white">
+                        {(() => {
+                          try {
+                            const arr = JSON.parse(program.os!);
+                            return Array.isArray(arr)
+                              ? arr.join(" / ")
+                              : program.os;
+                          } catch {
+                            return program.os;
+                          }
+                        })()}
+                      </span>
+                    </div>
+                  )}
+                  {program.cpu_min_name && (
+                    <div>
+                      <span className="font-semibold text-purple-400">
+                        CPU min:
+                      </span>{" "}
+                      <span className="text-white">{program.cpu_min_name}</span>
+                      {program.cpu_min_bench !== undefined && (
+                        <span className="text-gray-400">
+                          {" "}
+                          (bench: {program.cpu_min_bench})
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {program.gpu_min_name && (
+                    <div>
+                      <span className="font-semibold text-green-400">
+                        GPU min:
+                      </span>{" "}
+                      <span className="text-white">{program.gpu_min_name}</span>
+                      {program.gpu_min_bench !== undefined && (
+                        <span className="text-gray-400">
+                          {" "}
+                          (bench: {program.gpu_min_bench})
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {program.ram_min && (
+                    <div>
+                      <span className="font-semibold text-pink-400">
+                        RAM min:
+                      </span>{" "}
+                      <span className="text-white">{program.ram_min}</span>
+                      {program.ram_min_gb !== undefined && (
+                        <span className="text-gray-400">
+                          {" "}
+                          ({program.ram_min_gb} GB)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {program.disk_space && (
+                    <div>
+                      <span className="font-semibold text-yellow-400">
+                        Disk:
+                      </span>{" "}
+                      <span className="text-white">{program.disk_space}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>
