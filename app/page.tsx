@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 // Define TypeScript interfaces for better type safety
@@ -9,13 +9,13 @@ interface Program {
   name: string;
   version: string;
   OS: string[]; // آرایه
-  CPU_min: string[] | string;   // ← allow string or array
-  CPU_rec: string[] | string;   // ← allow string or array
-  Ram_min: string | number;     // ← allow number from DB
-  Ram_rec: string | number;     // ← allow number from DB
+  CPU_min: string[] | string; // ← allow string or array
+  CPU_rec: string[] | string; // ← allow string or array
+  Ram_min: string | number; // ← allow number from DB
+  Ram_rec: string | number; // ← allow number from DB
   GPU_min: string;
   GPU_rec: string;
-  Disk_space: string;           // ← fix casing to match DB
+  Disk_space: string; // ← fix casing to match DB
   is_free: boolean;
   is_open_source: boolean;
   featured: boolean; // اضافه شد
@@ -81,12 +81,24 @@ export default function App() {
   // Load lookup tables (cpus/gpus/rams) for select options
   useEffect(() => {
     const loadLookups = async () => {
-      const [{ data: cpus, error: e1 }, { data: gpus, error: e2 }, { data: rams, error: e3 }] =
-        await Promise.all([
-          supabase.from("cpus").select("id,name,benchmark,rank").order("rank", { ascending: true }),
-          supabase.from("gpus").select("id,name,benchmark,rank").order("rank", { ascending: true }),
-          supabase.from("rams").select("id,name").order("name", { ascending: true }),
-        ]);
+      const [
+        { data: cpus, error: e1 },
+        { data: gpus, error: e2 },
+        { data: rams, error: e3 },
+      ] = await Promise.all([
+        supabase
+          .from("cpus")
+          .select("id,name,benchmark,rank")
+          .order("rank", { ascending: true }),
+        supabase
+          .from("gpus")
+          .select("id,name,benchmark,rank")
+          .order("rank", { ascending: true }),
+        supabase
+          .from("rams")
+          .select("id,name")
+          .order("name", { ascending: true }),
+      ]);
       if (e1) console.error("cpus error:", e1);
       if (e2) console.error("gpus error:", e2);
       if (e3) console.error("rams error:", e3);
@@ -293,6 +305,82 @@ export default function App() {
     (p) => p.id === selectedProgramId
   );
 
+  // کامپوننت عمومی برای سرچ و انتخاب
+  function Autocomplete({
+    label,
+    value,
+    options,
+    placeholder,
+    onSelect,
+    width = "w-56",
+  }: {
+    label: string;
+    value: string;
+    options: string[];
+    placeholder: string;
+    onSelect: (val: string) => void;
+    width?: string;
+  }) {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState(value || "");
+    const ref = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => setQuery(value || ""), [value]);
+
+    useEffect(() => {
+      const onDocClick = (e: MouseEvent) => {
+        if (ref.current && !ref.current.contains(e.target as Node))
+          setOpen(false);
+      };
+      document.addEventListener("mousedown", onDocClick);
+      return () => document.removeEventListener("mousedown", onDocClick);
+    }, []);
+
+    const filtered = options
+      .filter(Boolean)
+      .filter((opt) => opt.toLowerCase().includes(query.toLowerCase()));
+
+    return (
+      <div className={`relative ${width}`} ref={ref}>
+        <label className="block text-xs text-gray-400 mb-1">{label}</label>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder={placeholder}
+          className="w-full p-2 rounded-lg bg-gray-700 text-gray-100 placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        {open && (
+          <div className="absolute z-20 mt-1 w-full max-h-56 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-2 text-gray-400 text-sm">No results</div>
+            ) : (
+              filtered.map((opt) => (
+                <div
+                  key={opt}
+                  className={`px-3 py-2 cursor-pointer text-sm hover:bg-blue-600 hover:text-white ${
+                    opt === value ? "bg-blue-700 text-white" : ""
+                  }`}
+                  onClick={() => {
+                    onSelect(opt);
+                    setQuery(opt);
+                    setOpen(false);
+                  }}
+                >
+                  {opt}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    );
+  } // پایان تعریف کامپوننت Autocomplete
+
   return (
     <div className="bg-gray-900 min-h-screen text-gray-100 font-sans flex flex-col items-center p-4">
       <div className="container max-w-6xl mx-auto space-y-8">
@@ -315,61 +403,42 @@ export default function App() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <div className="flex flex-wrap gap-4 justify-start">
-            {/* OS Filter - موجود */}
-            <select
-              name="OS"
-              onChange={handleFilterChange}
+            {/* OS Search */}
+            <Autocomplete
+              label="OS"
               value={filters.OS}
-              className="p-2 rounded-lg bg-gray-700 text-gray-100 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {OSOptions.map((OS) => (
-                <option key={OS} value={OS}>
-                  {OS || "Select Operating System"}
-                </option>
-              ))}
-            </select>
-
-            {/* CPU Filter */}
-            <select
-              name="cpu"
-              onChange={handleFilterChange}
+              options={OSOptions.filter(Boolean)}
+              placeholder="Search OS..."
+              onSelect={(val) => setFilters((f) => ({ ...f, OS: val }))}
+              width="w-56"
+            />
+            {/* CPU Search */}
+            <Autocomplete
+              label="CPU"
               value={filters.cpu}
-              className="p-2 rounded-lg bg-gray-700 text-gray-100 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {cpuOptions.map((cpu) => (
-                <option key={cpu} value={cpu}>
-                  {cpu || "Select CPU"}
-                </option>
-              ))}
-            </select>
-
-            {/* RAM Filter */}
-            <select
-              name="ram"
-              onChange={handleFilterChange}
+              options={cpuOptions.filter(Boolean)}
+              placeholder="Search CPU..."
+              onSelect={(val) => setFilters((f) => ({ ...f, cpu: val }))}
+              width="w-56"
+            />
+            {/* RAM Search */}
+            <Autocomplete
+              label="RAM"
               value={filters.ram}
-              className="p-2 rounded-lg bg-gray-700 text-gray-100 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {ramOptions.map((ram) => (
-                <option key={ram} value={ram}>
-                  {ram || "Select RAM"}
-                </option>
-              ))}
-            </select>
-
-            {/* GPU Filter */}
-            <select
-              name="gpu"
-              onChange={handleFilterChange}
+              options={ramOptions.filter(Boolean)}
+              placeholder="Search RAM..."
+              onSelect={(val) => setFilters((f) => ({ ...f, ram: val }))}
+              width="w-44"
+            />
+            {/* GPU Search */}
+            <Autocomplete
+              label="GPU"
               value={filters.gpu}
-              className="p-2 rounded-lg bg-gray-700 text-gray-100 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {gpuOptions.map((gpu) => (
-                <option key={gpu} value={gpu}>
-                  {gpu || "Select GPU"}
-                </option>
-              ))}
-            </select>
+              options={gpuOptions.filter(Boolean)}
+              placeholder="Search GPU..."
+              onSelect={(val) => setFilters((f) => ({ ...f, gpu: val }))}
+              width="w-56"
+            />
           </div>
         </div>
 
@@ -378,12 +447,11 @@ export default function App() {
           {filteredPrograms.map((program) => (
             <div
               key={program.id}
-              className={`bg-gray-800 p-6 rounded-xl shadow-lg border-2 cursor-pointer transition-all duration-200
-                ${
-                  selectedProgramId === program.id
-                    ? "border-blue-500 scale-105"
-                    : "border-gray-700 hover:border-blue-500"
-                }`}
+              className={`bg-gray-800 p-6 rounded-xl shadow-lg border-2 cursor-pointer transition-all duration-200 ${
+                selectedProgramId === program.id
+                  ? "border-blue-500 scale-105"
+                  : "border-gray-700 hover:border-blue-500"
+              }`}
               onClick={() => setSelectedProgramId(program.id)}
             >
               <h3 className="text-xl font-bold text-blue-400">
@@ -392,6 +460,7 @@ export default function App() {
                   ({program.version})
                 </span>
               </h3>
+
               <p className="text-md text-gray-300 mb-4">
                 {Array.isArray(program.OS)
                   ? program.OS.join(" / ")
@@ -409,9 +478,7 @@ export default function App() {
                         ? program.CPU_min.length > 0
                           ? program.CPU_min.join(" / ")
                           : "Intel or AMD processor"
-                        : program.CPU_min
-                        ? program.CPU_min
-                        : "Intel or AMD processor"}
+                        : program.CPU_min || "Intel or AMD processor"}
                     </span>
                   </span>
                   <br />
@@ -422,12 +489,12 @@ export default function App() {
                         ? program.CPU_rec.length > 0
                           ? program.CPU_rec.join(" / ")
                           : "Intel or AMD processor with 64-bit support"
-                        : program.CPU_rec
-                        ? program.CPU_rec
-                        : "Intel or AMD processor with 64-bit support"}
+                        : program.CPU_rec ||
+                          "Intel or AMD processor with 64-bit support"}
                     </span>
                   </span>
                 </p>
+
                 <p>
                   <span className="font-semibold text-gray-300">RAM:</span>
                   <br />
@@ -445,6 +512,7 @@ export default function App() {
                     </span>
                   </span>
                 </p>
+
                 <p>
                   <span className="font-semibold text-gray-300">GPU:</span>
                   <br />
@@ -469,7 +537,7 @@ export default function App() {
                   </span>
                   <br />
                   <span className="text-gray-400 font-semibold ml-4">
-                    {program.Disk_space}  {/* ← use Disk_space (matches DB) */}
+                    {program.Disk_space}
                   </span>
                 </p>
               </div>
@@ -490,16 +558,14 @@ export default function App() {
                     Paid
                   </span>
                 )}
+                {program.featured && (
+                  <div className="flex justify-end mt-2 ml-auto">
+                    <span title="Featured" className="text-yellow-400 text-2xl">
+                      ★
+                    </span>
+                  </div>
+                )}
               </div>
-
-              {/* ستاره برای featured */}
-              {program.featured && (
-                <div className="flex justify-end mt-2">
-                  <span title="Featured" className="text-yellow-400 text-2xl">
-                    ★
-                  </span>
-                </div>
-              )}
             </div>
           ))}
         </div>
