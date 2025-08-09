@@ -13,7 +13,6 @@ export type LaptopRow = {
   ram_gb: number | null;
   gpu_name: string | null;
   gpu_score: number | null;
-  // اگر purchase_url هم خواستی اینجا بیار، ولی در کارت نیازی نیست
 };
 
 export type AnalysisItem = {
@@ -31,9 +30,25 @@ export type ResultItem = {
 type Props = {
   results: ResultItem[];
   onRestart: () => void;
+
+  // مقایسه
+  compareIds: number[];
+  onToggleCompare: (id: number) => void;
+  onClearCompare: () => void;
 };
 
-export default function Step4Results({ results, onRestart }: Props) {
+export default function Step4Results({
+  results,
+  onRestart,
+  compareIds,
+  onToggleCompare,
+  onClearCompare,
+}: Props) {
+  const canAdd = (id: number) =>
+    compareIds.includes(id) || compareIds.length < 3;
+
+  const compareQuery = compareIds.join(",");
+
   return (
     <section className="space-y-6" dir="rtl">
       <h2 className="text-2xl font-semibold text-center">
@@ -48,30 +63,40 @@ export default function Step4Results({ results, onRestart }: Props) {
               : score > 60
               ? "bg-yellow-500"
               : "bg-red-500";
+          const checked = compareIds.includes(laptop.id);
 
           return (
             <div
               key={laptop.id}
-              className="bg-white p-6 rounded-lg shadow-md flex flex-col md:flex-row gap-6"
+              className="group bg-white p-6 rounded-lg shadow-md flex flex-col md:flex-row gap-6"
             >
-              <div className="md:w-1/3">
+              <Link
+                href={`/laptop-selector/${laptop.id}`}
+                className="md:w-1/3 block"
+              >
                 <div className="w-full h-48 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                   {laptop.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={laptop.image_url}
                       alt={laptop.name || "laptop"}
-                      className="w-full h-full object-cover rounded-lg"
+                      className="w-full h-full object-cover rounded-lg transition group-hover:scale-[1.02]"
                     />
                   ) : (
                     <span className="text-gray-500">تصویر لپ‌تاپ</span>
                   )}
                 </div>
-              </div>
+              </Link>
 
               <div className="md:w-2/3">
                 <div className="flex justify-between items-start">
-                  <h3 className="text-2xl font-bold">{laptop.name}</h3>
+                  <Link
+                    href={`/laptop-selector/${laptop.id}`}
+                    className="text-2xl font-bold hover:underline"
+                  >
+                    {laptop.name}
+                  </Link>
+
                   <div className="text-center">
                     <div className="text-sm text-gray-600">امتیاز سازگاری</div>
                     <div
@@ -112,6 +137,22 @@ export default function Step4Results({ results, onRestart }: Props) {
                       {laptop.price_eur?.toLocaleString?.() ?? laptop.price_eur}
                     </div>
                   )}
+
+                  <label className="ml-auto inline-flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={!checked && !canAdd(laptop.id)}
+                      onChange={() => onToggleCompare(laptop.id)}
+                    />
+                    <span
+                      className={
+                        !checked && !canAdd(laptop.id) ? "text-gray-400" : ""
+                      }
+                    >
+                      افزودن به مقایسه
+                    </span>
+                  </label>
                 </div>
 
                 {analysis.length > 0 && (
@@ -155,6 +196,29 @@ export default function Step4Results({ results, onRestart }: Props) {
           شروع مجدد
         </button>
       </div>
+
+      {/* نوار شناور مقایسه */}
+      {compareIds.length > 0 && (
+        <div className="fixed inset-x-0 bottom-4 flex justify-center z-40 pointer-events-none">
+          <div className="pointer-events-auto bg-white/95 backdrop-blur border shadow-lg rounded-full px-4 py-2 flex items-center gap-3">
+            <span className="text-sm">
+              مقایسه: {compareIds.length}/3 انتخاب شده
+            </span>
+            <Link
+              href={`/laptop-selector/compare?ids=${compareQuery}`}
+              className="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-full hover:bg-blue-700"
+            >
+              رفتن به صفحه مقایسه
+            </Link>
+            <button
+              onClick={onClearCompare}
+              className="text-sm text-gray-700 hover:underline"
+            >
+              پاک‌کردن
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

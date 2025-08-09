@@ -64,6 +64,9 @@ export default function LaptopSelectorPage() {
     sort: SortKey;
   }>({ sort: "score_desc" });
 
+  // مقایسه (تا ۳ لپ‌تاپ)
+  const [compareIds, setCompareIds] = useState<number[]>([]);
+
   // 1) Load data
   useEffect(() => {
     (async () => {
@@ -89,7 +92,6 @@ export default function LaptopSelectorPage() {
 
   // 2) Hydrate from URL once
   useEffect(() => {
-    // فقط در mount یا وقتی URL عوض شد sync کن
     const s = (urlState.step as 1 | 2 | 3 | 4) || 1;
     setStep(s);
 
@@ -98,19 +100,17 @@ export default function LaptopSelectorPage() {
     ) as CategoryId[];
     setSelectedCategories(cats);
 
-    // weights از URL
+    // weights از URL و نرمال‌سازی
     const w: Record<CategoryId, number> = {} as any;
     cats.forEach((c) => {
       const val = urlState.weights?.[c] ?? 100 / (cats.length || 1);
       w[c] = val;
     });
-    // normalize
     const sum = cats.reduce((a, c) => a + (w[c] || 0), 0) || 1;
     cats.forEach((c) => (w[c] = ((w[c] || 0) / sum) * 100));
     setWeights(w);
 
     setSelectedProgramIds(urlState.progs || []);
-
     setFilters({
       minPrice: urlState.minPrice ?? null,
       maxPrice: urlState.maxPrice ?? null,
@@ -128,12 +128,11 @@ export default function LaptopSelectorPage() {
     urlState.minSSD,
   ]);
 
-  // 3) Push state to URL whenever key states change (debounced naturally by React batching)
+  // 3) Push state to URL whenever key states change
   useEffect(() => {
     const next: UrlState = {
       step,
       cats: selectedCategories,
-      // weights
       weights: selectedCategories.reduce((acc, c) => {
         acc[c] = Math.round((weights[c] || 0) * 100) / 100;
         return acc;
@@ -160,7 +159,7 @@ export default function LaptopSelectorPage() {
           else delete w[c];
         });
         const sum = next.reduce((s, c) => s + (w[c] || 0), 0) || 1;
-        next.forEach((c) => (w[c] = ((w[c] || 0) / sum) * 100));
+        next.forEach((c) => (w[c] = ((w[c] || 0) / (sum || 1)) * 100));
         setWeights(w);
       } else {
         setWeights({} as any);
@@ -337,7 +336,7 @@ export default function LaptopSelectorPage() {
     return arr;
   }, [results, filters]);
 
-  // هندلرهای عمومی
+  // هندلرها
   const addProgramIfNotSelected = (p: ProgramReq) => {
     setSelectedProgramIds((prev) =>
       prev.includes(p.id) ? prev : [...prev, p.id]
@@ -362,6 +361,17 @@ export default function LaptopSelectorPage() {
   };
   const removeProgram = (id: number) =>
     setSelectedProgramIds((prev) => prev.filter((x) => x !== id));
+
+  // مقایسه
+  const toggleCompare = (id: number) =>
+    setCompareIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : prev.length < 3
+        ? [...prev, id]
+        : prev
+    );
+  const clearCompare = () => setCompareIds([]);
 
   // Loading/Error
   if (loading) return <div className="p-6 text-center">در حال بارگذاری…</div>;
@@ -456,7 +466,11 @@ export default function LaptopSelectorPage() {
               setSelectedProgramIds([]);
               setWeights({} as any);
               setFilters({ sort: "score_desc" });
+              setCompareIds([]);
             }}
+            compareIds={compareIds}
+            onToggleCompare={toggleCompare}
+            onClearCompare={clearCompare}
           />
         </>
       )}
