@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "../../../lib/supabaseClient"; // در صورت تفاوت مسیر، اصلاح کن
+import { supabase } from "../../../lib/supabaseClient"; // اگر مسیر فرق دارد، اصلاح کن
 
 type Row = {
   id: number;
@@ -22,6 +22,7 @@ type Row = {
 export default function ComparePage() {
   const sp = useSearchParams();
   const router = useRouter();
+
   const ids = useMemo(
     () =>
       (sp.get("ids") || "")
@@ -41,17 +42,21 @@ export default function ComparePage() {
       try {
         setLoading(true);
         setErr(null);
+
         if (ids.length === 0) {
           setRows([]);
           return;
         }
+
         const { data, error } = await supabase
           .from("v_laptops_expanded")
           .select("*")
           .in("id", ids);
+
         if (error) throw error;
+
         // حفظ ترتیب IDs
-        const map = new Map((data || []).map((d: any) => [d.id, d]));
+        const map = new Map<number, Row>((data as Row[]).map((d) => [d.id, d]));
         setRows(ids.map((id) => map.get(id)).filter(Boolean) as Row[]);
       } catch (e: any) {
         setErr(e?.message ?? "خطا در دریافت اطلاعات");
@@ -133,41 +138,43 @@ export default function ComparePage() {
             </thead>
 
             <tbody>
-              {[
-                ["پردازنده", (r: Row) => r.cpu_name || "-"],
-                ["امتیاز CPU", (r: Row) => r.cpu_score ?? "-"],
-                ["گرافیک", (r: Row) => r.gpu_name || "-"],
-                ["امتیاز GPU", (r: Row) => r.gpu_score ?? "-"],
+              {(
                 [
-                  "RAM",
-                  (r: Row) => (r.ram_gb != null ? `${r.ram_gb} GB` : "-"),
-                ],
-                [
-                  "SSD",
-                  (r: Row) => (r.ssd_size_gb ? `${r.ssd_size_gb} GB` : "-"),
-                ],
-                [
-                  "لینک خرید",
-                  (r: Row) =>
-                    r.purchase_url ? (
-                      <a
-                        href={r.purchase_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        مشاهده
-                      </a>
-                    ) : (
-                      "-"
-                    ),
-                ],
-              ].map(([label, render], idx) => (
+                  ["پردازنده", (r: Row) => r.cpu_name || "-"],
+                  ["امتیاز CPU", (r: Row) => r.cpu_score ?? "-"],
+                  ["گرافیک", (r: Row) => r.gpu_name || "-"],
+                  ["امتیاز GPU", (r: Row) => r.gpu_score ?? "-"],
+                  [
+                    "RAM",
+                    (r: Row) => (r.ram_gb != null ? `${r.ram_gb} GB` : "-"),
+                  ],
+                  [
+                    "SSD",
+                    (r: Row) => (r.ssd_size_gb ? `${r.ssd_size_gb} GB` : "-"),
+                  ],
+                  [
+                    "لینک خرید",
+                    (r: Row) =>
+                      r.purchase_url ? (
+                        <a
+                          href={r.purchase_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          مشاهده
+                        </a>
+                      ) : (
+                        "-"
+                      ),
+                  ],
+                ] as Array<[string, (r: Row) => ReactNode]>
+              ).map(([label, render], idx) => (
                 <tr key={idx} className={idx % 2 ? "bg-gray-50/50" : ""}>
                   <td className="p-3 font-medium w-40">{label}</td>
                   {rows.map((r) => (
                     <td key={r.id} className="p-3">
-                      {(render as any)(r)}
+                      {render(r)}
                     </td>
                   ))}
                 </tr>
