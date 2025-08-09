@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Category } from "./Step1CategorySelect";
-import type { ProgramReq } from "./Step3SoftwareSelection";
+import type { ProgramReq } from "../types";
 
 type CategoryId = Category["id"];
 

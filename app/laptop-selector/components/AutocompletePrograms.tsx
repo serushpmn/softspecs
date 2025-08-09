@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { debounce } from "../utils/debounce";
-import type { ProgramReq } from "./Step3SoftwareSelection";
+import type { ProgramReq } from "../types";
 
 type Props = {
   onPick: (program: ProgramReq) => void; // وقتی کاربر یک برنامه را انتخاب کرد

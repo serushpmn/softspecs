@@ -8,9 +8,9 @@ import Step1CategorySelect, {
   type Category,
 } from "./components/Step1CategorySelect";
 import Step2Weighting from "./components/Step2Weighting";
-import Step3SoftwareSelection, {
-  type ProgramReq,
-} from "./components/Step3SoftwareSelection";
+import Step3SoftwareSelection from "./components/Step3SoftwareSelection";
+import type { ProgramReq } from "./types";
+
 import Step4Results, {
   type LaptopRow,
   type ResultItem,
