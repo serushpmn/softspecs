@@ -258,8 +258,12 @@ export default function App() {
           // از داده‌های برنامه‌ها (CPU_min/CPU_rec)
           ...(programs
             .flatMap((p) => {
-              const mins = Array.isArray((p as any).CPU_min) ? (p as any).CPU_min : [(p as any).CPU_min];
-              const recs = Array.isArray((p as any).CPU_rec) ? (p as any).CPU_rec : [(p as any).CPU_rec];
+              const mins = Array.isArray((p as any).CPU_min)
+                ? (p as any).CPU_min
+                : [(p as any).CPU_min];
+              const recs = Array.isArray((p as any).CPU_rec)
+                ? (p as any).CPU_rec
+                : [(p as any).CPU_rec];
               return [...mins, ...recs];
             })
             .filter(Boolean) as string[]),
@@ -275,8 +279,12 @@ export default function App() {
       new Set(
         [
           ...ramList.map((r) => parseRamNumber(r.name)),
-          ...programs.map((p) => parseRamNumber((p as any).Ram_min ?? (p as any).ram_min)),
-          ...programs.map((p) => parseRamNumber((p as any).Ram_rec ?? (p as any).ram_rec)),
+          ...programs.map((p) =>
+            parseRamNumber((p as any).Ram_min ?? (p as any).ram_min)
+          ),
+          ...programs.map((p) =>
+            parseRamNumber((p as any).Ram_rec ?? (p as any).ram_rec)
+          ),
         ].filter((n) => Number.isFinite(n)) as number[]
       )
     )
@@ -773,25 +781,27 @@ export default function App() {
 
   // رندر اصلی صفحه
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50 font-sans" dir="ltr">
       <div className="container max-w-6xl mx-auto p-4 md:p-8 space-y-8">
-        <header className="text-center">
+        <header className="text-left">
           <h1 className="text-3xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Software Specs Finder
           </h1>
-          <p className="text-gray-600 mt-2">پیدا کردن نیازمندی سیستم برای برنامه‌ها</p>
-          <div className="mt-4 flex items-center justify-center gap-3">
+          <p className="text-gray-600 mt-2">
+            Find system requirements for software
+          </p>
+          <div className="mt-4 flex items-center justify-start gap-3">
             <Link
               href="/laptop-selector"
-              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold shadow-lg hover:shadow-xl"
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold shadow-lg hover:shadow-xl transition-all duration-200"
             >
-              رفتن به لپ‌تاپ‌گزین
+              Go to Laptop Selector
             </Link>
           </div>
         </header>
 
         {/* Search + Filters */}
-        <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6 w-full">
+        <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-gray-200 shadow-md space-y-6 w-full">
           {/* فیلترهای انتخاب برنامه */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
             <Autocomplete
@@ -842,7 +852,7 @@ export default function App() {
                 setFilters(pendingFilters);
                 setSearchTerm(pendingSearch);
               }}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-colors duration-200 text-white font-semibold shadow-md w-full sm:w-auto"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-white font-semibold shadow-md w-full sm:w-auto"
             >
               ✅ Apply Filters
             </button>
@@ -855,7 +865,7 @@ export default function App() {
                 setSearchTerm("");
                 setSelectedProgramId(null);
               }}
-              className="px-5 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors duration-200 text-gray-800 font-semibold shadow-sm w-full sm:w-auto"
+              className="px-5 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 transition-all duration-200 text-gray-800 font-semibold shadow-sm w-full sm:w-auto"
             >
               🔄 Reset
             </button>
@@ -880,7 +890,11 @@ export default function App() {
             filteredPrograms.map((program) => (
               <div
                 key={program.id}
-                className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300"
+                className="bg-white/95 card-modern transition-all duration-300 border border-gray-200 rounded-2xl shadow-md hover:shadow-2xl hover:-translate-y-2 hover:border-blue-400 cursor-pointer p-6"
+                style={{
+                  animation: "fadeInUp 0.7s cubic-bezier(.4,2,.3,1)",
+                  fontFamily: "'Vazirmatn', Tahoma, Arial, sans-serif",
+                }}
               >
                 <h3 className="text-xl font-bold text-gray-900">
                   {program.name}{" "}
@@ -916,16 +930,24 @@ export default function App() {
                       </span>{" "}
                       <span>{program.cpu_min_name}</span>
                       {program.cpu_min_bench !== undefined && (
-                        <span className="text-gray-500"> (bench: {program.cpu_min_bench})</span>
+                        <span className="text-gray-500">
+                          {" "}
+                          (bench: {program.cpu_min_bench})
+                        </span>
                       )}
                     </div>
                   )}
                   {program.gpu_min_name && (
                     <div>
-                      <span className="font-semibold text-green-600">GPU min:</span>{" "}
+                      <span className="font-semibold text-green-600">
+                        GPU min:
+                      </span>{" "}
                       <span>{program.gpu_min_name}</span>
                       {program.gpu_min_bench !== undefined && (
-                        <span className="text-gray-500"> (bench: {program.gpu_min_bench})</span>
+                        <span className="text-gray-500">
+                          {" "}
+                          (bench: {program.gpu_min_bench})
+                        </span>
                       )}
                     </div>
                   )}
@@ -936,13 +958,18 @@ export default function App() {
                       </span>{" "}
                       <span>{program.ram_min}</span>
                       {program.ram_min_gb !== undefined && (
-                        <span className="text-gray-500"> ({program.ram_min_gb} GB)</span>
+                        <span className="text-gray-500">
+                          {" "}
+                          ({program.ram_min_gb} GB)
+                        </span>
                       )}
                     </div>
                   )}
                   {program.disk_space && (
                     <div>
-                      <span className="font-semibold text-yellow-600">Disk:</span>{" "}
+                      <span className="font-semibold text-yellow-600">
+                        Disk:
+                      </span>{" "}
                       <span>{program.disk_space}</span>
                     </div>
                   )}
@@ -952,6 +979,24 @@ export default function App() {
           )}
         </div>
       </div>
+      <style jsx global>{`
+        @import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap");
+        html,
+        body,
+        * {
+          font-family: "Vazirmatn", Tahoma, Arial, sans-serif !important;
+        }
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(32px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 } // ← پایان کامپوننت App
