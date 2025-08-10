@@ -168,43 +168,66 @@ export default function Step1CategorySelect({
         })}
       </motion.div>
 
+      {/* Fixed action bar with selected chips */}
       <motion.div
-        className="text-center mt-8"
+        className="fixed inset-x-0 bottom-0 z-40 pointer-events-none"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.6 }}
       >
-        <motion.button
-          disabled={selected.length === 0}
-          onClick={onNext}
-          className={`relative overflow-hidden px-10 py-4 rounded-2xl font-bold text-lg shadow-lg transition-all duration-300 ${
-            selected.length === 0
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-          } text-white`}
-          whileHover={selected.length > 0 ? { scale: 1.05, y: -2 } : {}}
-          whileTap={selected.length > 0 ? { scale: 0.95 } : {}}
-        >
-          <span className="relative z-10">مرحله بعد</span>
-          {selected.length > 0 && (
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600"
-              initial={{ x: "-100%" }}
-              whileHover={{ x: "0%" }}
-              transition={{ duration: 0.3 }}
-            />
-          )}
-          <motion.svg
-            className="w-5 h-5 ml-2 inline-block relative z-10 -scale-x-100"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            animate={{ x: [0, 5, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </motion.svg>
-        </motion.button>
+        <div className="pointer-events-auto container max-w-6xl mx-auto p-3">
+          <div className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-2xl px-4 py-3 flex items-center justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              {selected.length === 0 ? (
+                <span className="text-sm text-gray-600">یک دسته انتخاب کنید</span>
+              ) : (
+                selected.map((id) => (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-2 bg-blue-50/80 text-blue-800 border border-blue-200 px-3 py-1.5 rounded-full text-sm"
+                  >
+                    {categories.find((c) => c.id === id)?.name ?? id}
+                    <button
+                      className="text-blue-700 hover:text-blue-900"
+                      onClick={() => onToggle(id)}
+                      aria-label={`حذف ${categories.find((c) => c.id === id)?.name ?? id}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+            <motion.button
+              disabled={selected.length === 0}
+              onClick={onNext}
+              className={`relative overflow-hidden px-6 py-2.5 rounded-xl font-bold shadow-md transition-all ${
+                selected.length === 0
+                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                  : "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg"
+              }`}
+              whileHover={selected.length > 0 ? { scale: 1.03 } : {}}
+              whileTap={selected.length > 0 ? { scale: 0.97 } : {}}
+            >
+              مرحله بعد
+              <motion.svg
+                className="w-5 h-5 mr-2 inline-block"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                animate={{ x: [0, 4, 0] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              >
+                <path
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  strokeWidth={3}
+  d="M11 7l-5 5m0 0l5 5m-5-5h12"
+/>
+
+              </motion.svg>
+            </motion.button>
+          </div>
+        </div>
       </motion.div>
     </motion.section>
   );

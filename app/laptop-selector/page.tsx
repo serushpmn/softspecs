@@ -509,15 +509,17 @@ export default function LaptopSelectorPage() {
 
       <ProgressBar step={step} />
 
-      <SelectionChips
-        categories={CATEGORIES}
-        selectedCategories={selectedCategories}
-        selectedPrograms={programs
-          .filter((p) => selectedProgramIds.includes(p.id))
-          .map((p) => ({ id: p.id, name: p.name }))}
-        onRemoveCategory={removeCategory}
-        onRemoveProgram={removeProgram}
-      />
+      {step !== 1 && (
+        <SelectionChips
+          categories={CATEGORIES}
+          selectedCategories={selectedCategories}
+          selectedPrograms={programs
+            .filter((p) => selectedProgramIds.includes(p.id))
+            .map((p) => ({ id: p.id, name: p.name }))}
+          onRemoveCategory={removeCategory}
+          onRemoveProgram={removeProgram}
+        />
+      )}
 
       {step === 1 && (
         <Step1CategorySelect
@@ -580,6 +582,7 @@ export default function LaptopSelectorPage() {
               setFilters({ sort: "score_desc" });
               setCompareIds([]);
             }}
+            onBack={() => goTo(3)}
             compareIds={compareIds}
             onToggleCompare={toggleCompare}
             onClearCompare={clearCompare}

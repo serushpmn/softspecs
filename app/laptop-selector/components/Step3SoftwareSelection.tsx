@@ -232,59 +232,35 @@ export default function Step3SoftwareSelection({
         })}
       </motion.div>
 
+      {/* Fixed action bar */}
       <motion.div
-        className="flex justify-center gap-4 mt-8"
+        className="fixed inset-x-0 bottom-0 z-40 pointer-events-none"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8, duration: 0.6 }}
       >
-        <motion.button
-          onClick={onPrev}
-          className="bg-gray-100 text-gray-700 font-bold py-3 px-8 rounded-2xl border border-gray-200 hover:bg-gray-200 transition-all duration-300"
-          whileHover={{ scale: 1.05, x: 5 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <span className="flex items-center gap-2">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <div className="pointer-events-auto container max-w-6xl mx-auto p-3">
+          <div className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-2xl px-4 py-3 flex items-center justify-between">
+            <motion.button
+              onClick={onPrev}
+              className="px-5 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            بازگشت
-          </span>
-        </motion.button>
-
-        <motion.button
-          onClick={onNext}
-          className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
-          whileHover={{ scale: 1.05, y: -2 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <span className="flex items-center gap-2">
-            نمایش لپ‌تاپ‌ها
-            <svg
-              className="w-5 h-5 -scale-x-100"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+              بازگشت
+            </motion.button>
+            <motion.button
+              onClick={onNext}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold shadow-sm hover:shadow-md"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </span>
-        </motion.button>
+              نمایش لپ‌تاپ‌ها
+              <svg className="w-5 h-5 inline-block ml-2 -scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </motion.button>
+          </div>
+        </div>
       </motion.div>
 
       {/* Modal مدرن */}

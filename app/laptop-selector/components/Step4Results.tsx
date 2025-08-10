@@ -31,6 +31,7 @@ export type ResultItem = {
 type Props = {
   results: ResultItem[];
   onRestart: () => void;
+  onBack: () => void;
 
   // مقایسه
   compareIds: number[];
@@ -83,6 +84,7 @@ const scoreVariants = {
 export default function Step4Results({
   results,
   onRestart,
+  onBack,
   compareIds,
   onToggleCompare,
   onClearCompare,
@@ -373,6 +375,24 @@ export default function Step4Results({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Fixed action bar (Back / Restart) */}
+      <motion.div
+        className="fixed bottom-0 inset-x-0 z-30 pointer-events-none"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="pointer-events-auto container max-w-6xl mx-auto p-3">
+          <div className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-2xl px-4 py-3 flex items-center justify-between">
+            <button onClick={onBack} className="px-5 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold">
+              بازگشت
+            </button>
+            <button onClick={onRestart} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold shadow-sm hover:shadow-md">
+              شروع مجدد
+            </button>
+          </div>
+        </div>
+      </motion.div>
     </motion.section>
   );
 }
