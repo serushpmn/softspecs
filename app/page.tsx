@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
 
 // Types
@@ -239,7 +240,7 @@ export default function App() {
       : Array.from(
           new Set(
             programs
-              .flatMap((p) => (Array.isArray(p.OS) ? p.OS : [p.OS]))
+              .flatMap((p) => (Array.isArray(p.os) ? p.os : [p.os]))
               .filter((os): os is string => typeof os === "string" && !!os)
               .map(cleanOS)
           )
@@ -257,8 +258,8 @@ export default function App() {
           // از داده‌های برنامه‌ها (CPU_min/CPU_rec)
           ...(programs
             .flatMap((p) => {
-              const mins = Array.isArray(p.CPU_min) ? p.CPU_min : [p.CPU_min];
-              const recs = Array.isArray(p.CPU_rec) ? p.CPU_rec : [p.CPU_rec];
+              const mins = Array.isArray((p as any).CPU_min) ? (p as any).CPU_min : [(p as any).CPU_min];
+              const recs = Array.isArray((p as any).CPU_rec) ? (p as any).CPU_rec : [(p as any).CPU_rec];
               return [...mins, ...recs];
             })
             .filter(Boolean) as string[]),
@@ -274,8 +275,8 @@ export default function App() {
       new Set(
         [
           ...ramList.map((r) => parseRamNumber(r.name)),
-          ...programs.map((p) => parseRamNumber(p.Ram_min)),
-          ...programs.map((p) => parseRamNumber(p.Ram_rec)),
+          ...programs.map((p) => parseRamNumber((p as any).Ram_min ?? (p as any).ram_min)),
+          ...programs.map((p) => parseRamNumber((p as any).Ram_rec ?? (p as any).ram_rec)),
         ].filter((n) => Number.isFinite(n)) as number[]
       )
     )
@@ -311,10 +312,10 @@ export default function App() {
 
     if (!userRam || !userCores) return false;
 
-    const minRam = parseRam(program.Ram_min as unknown as string);
+    const minRam = parseRam((program.ram_min as unknown as string) ?? "");
 
     // ایمن‌سازی برای union type
-    const cpuMatch = String(program.CPU_min).match(/(\d+)/);
+    const cpuMatch = String((program as any).CPU_min ?? "").match(/(\d+)/);
     const minCores = cpuMatch ? parseInt(cpuMatch[1]) : 1;
 
     const isCompatible = userRam >= minRam && userCores >= minCores;
@@ -373,7 +374,7 @@ export default function App() {
 
     return (
       <div className={`relative ${width}`} ref={ref}>
-        <label className="block text-xs text-gray-400 mb-1">{label}</label>
+        <label className="block text-xs text-gray-600 mb-1">{label}</label>
         <div className="relative">
           <input
             type="text"
@@ -409,13 +410,13 @@ export default function App() {
               }
             }}
             placeholder={placeholder}
-            className="w-full pr-8 p-2 rounded-lg bg-gray-700 text-gray-100 placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pr-8 p-2 rounded-lg bg-white text-gray-900 placeholder-gray-400 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {value || query ? (
             <button
               type="button"
               aria-label="Clear"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-white"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
               onClick={() => {
                 onSelect("");
                 setQuery("");
@@ -429,9 +430,9 @@ export default function App() {
         </div>
 
         {open ? (
-          <div className="absolute z-20 mt-1 w-full max-h-80 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+          <div className="absolute z-20 mt-1 w-full max-h-80 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg">
             {list.length === 0 ? (
-              <div className="px-3 py-2 text-gray-400 text-sm">No results</div>
+              <div className="px-3 py-2 text-gray-500 text-sm">No results</div>
             ) : (
               list.map((opt, idx) => (
                 <div
@@ -439,8 +440,8 @@ export default function App() {
                   className={`px-3 py-2 cursor-pointer text-sm ${
                     idx === highlighted
                       ? "bg-blue-600 text-white"
-                      : "hover:bg-blue-600 hover:text-white"
-                  } ${opt === value ? "bg-blue-700 text-white" : ""}`}
+                      : "hover:bg-blue-50 hover:text-blue-700"
+                  } ${opt === value ? "bg-blue-600/90 text-white" : ""}`}
                   onMouseEnter={() => setHighlighted(idx)}
                   onMouseLeave={() => setHighlighted(-1)}
                   onClick={() => {
@@ -531,7 +532,7 @@ export default function App() {
 
     return (
       <div className={`relative ${width}`} ref={ref}>
-        <label className="block text-xs text-gray-400 mb-1">{label}</label>
+        <label className="block text-xs text-gray-600 mb-1">{label}</label>
         <input
           type="text"
           value={query}
@@ -564,13 +565,13 @@ export default function App() {
               }
             }
           }}
-          className="w-full p-2 pr-8 rounded-lg bg-gray-700 text-gray-100 border border-gray-600"
+          className="w-full p-2 pr-8 rounded-lg bg-white text-gray-900 border border-gray-300"
         />
         {(value || query) && (
           <button
             type="button"
             aria-label="Clear"
-            className="absolute right-2 top-7 -translate-y-1/2 text-gray-300 hover:text-white"
+            className="absolute right-2 top-7 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             onClick={() => {
               onSelect("");
               setQuery("");
@@ -583,11 +584,11 @@ export default function App() {
         )}
 
         {open && query.trim().length >= 2 && (
-          <div className="absolute z-20 mt-1 w-full max-h-80 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+          <div className="absolute z-20 mt-1 w-full max-h-80 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg">
             {loading ? (
-              <div className="px-3 py-2 text-gray-400 text-sm">Loading...</div>
+              <div className="px-3 py-2 text-gray-500 text-sm">Loading...</div>
             ) : results.length === 0 ? (
-              <div className="px-3 py-2 text-gray-400 text-sm">No results</div>
+              <div className="px-3 py-2 text-gray-500 text-sm">No results</div>
             ) : (
               results.map((opt, idx) => (
                 <div
@@ -595,8 +596,8 @@ export default function App() {
                   className={`px-3 py-2 cursor-pointer text-sm ${
                     idx === highlighted
                       ? "bg-blue-600 text-white"
-                      : "hover:bg-blue-600 hover:text-white"
-                  } ${opt === value ? "bg-blue-700 text-white" : ""}`}
+                      : "hover:bg-blue-50 hover:text-blue-700"
+                  } ${opt === value ? "bg-blue-600/90 text-white" : ""}`}
                   onMouseEnter={() => setHighlighted(idx)}
                   onMouseLeave={() => setHighlighted(-1)}
                   onClick={() => {
@@ -685,7 +686,7 @@ export default function App() {
 
     return (
       <div className={`relative ${width}`} ref={ref}>
-        <label className="block text-xs text-gray-400 mb-1">{label}</label>
+        <label className="block text-xs text-gray-600 mb-1">{label}</label>
         <input
           type="text"
           value={query}
@@ -718,13 +719,13 @@ export default function App() {
               }
             }
           }}
-          className="w-full p-2 pr-8 rounded-lg bg-gray-700 text-gray-100 border border-gray-600"
+          className="w-full p-2 pr-8 rounded-lg bg-white text-gray-900 border border-gray-300"
         />
         {(value || query) && (
           <button
             type="button"
             aria-label="Clear"
-            className="absolute right-2 top-7 -translate-y-1/2 text-gray-300 hover:text-white"
+            className="absolute right-2 top-7 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             onClick={() => {
               onSelect("");
               setQuery("");
@@ -737,11 +738,11 @@ export default function App() {
         )}
 
         {open && query.trim().length >= 2 && (
-          <div className="absolute z-20 mt-1 w-full max-h-80 overflow-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+          <div className="absolute z-20 mt-1 w-full max-h-80 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg">
             {loading ? (
-              <div className="px-3 py-2 text-gray-400 text-sm">Loading...</div>
+              <div className="px-3 py-2 text-gray-500 text-sm">Loading...</div>
             ) : results.length === 0 ? (
-              <div className="px-3 py-2 text-gray-400 text-sm">No results</div>
+              <div className="px-3 py-2 text-gray-500 text-sm">No results</div>
             ) : (
               results.map((opt, idx) => (
                 <div
@@ -749,8 +750,8 @@ export default function App() {
                   className={`px-3 py-2 cursor-pointer text-sm ${
                     idx === highlighted
                       ? "bg-blue-600 text-white"
-                      : "hover:bg-blue-600 hover:text-white"
-                  } ${opt === value ? "bg-blue-700 text-white" : ""}`}
+                      : "hover:bg-blue-50 hover:text-blue-700"
+                  } ${opt === value ? "bg-blue-600/90 text-white" : ""}`}
                   onMouseEnter={() => setHighlighted(idx)}
                   onMouseLeave={() => setHighlighted(-1)}
                   onClick={() => {
@@ -772,16 +773,25 @@ export default function App() {
 
   // رندر اصلی صفحه
   return (
-    <div className="bg-gray-900 min-h-screen text-gray-100 font-sans flex flex-col items-center p-4">
-      <div className="container max-w-6xl mx-auto space-y-8">
-        <header className="py-6 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold">
+    <div className="min-h-screen">
+      <div className="container max-w-6xl mx-auto p-4 md:p-8 space-y-8">
+        <header className="text-center">
+          <h1 className="text-3xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Software Specs Finder
           </h1>
+          <p className="text-gray-600 mt-2">پیدا کردن نیازمندی سیستم برای برنامه‌ها</p>
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <Link
+              href="/laptop-selector"
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold shadow-lg hover:shadow-xl"
+            >
+              رفتن به لپ‌تاپ‌گزین
+            </Link>
+          </div>
         </header>
 
         {/* Search + Filters */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border border-gray-700 shadow-lg space-y-6 w-full">
+        <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6 w-full">
           {/* فیلترهای انتخاب برنامه */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
             <Autocomplete
@@ -832,7 +842,7 @@ export default function App() {
                 setFilters(pendingFilters);
                 setSearchTerm(pendingSearch);
               }}
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 transition-colors duration-200 text-white font-semibold shadow-md w-full sm:w-auto"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-colors duration-200 text-white font-semibold shadow-md w-full sm:w-auto"
             >
               ✅ Apply Filters
             </button>
@@ -845,7 +855,7 @@ export default function App() {
                 setSearchTerm("");
                 setSelectedProgramId(null);
               }}
-              className="px-5 py-2.5 rounded-xl bg-gray-600 hover:bg-gray-700 transition-colors duration-200 text-white font-semibold shadow-md w-full sm:w-auto"
+              className="px-5 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors duration-200 text-gray-800 font-semibold shadow-sm w-full sm:w-auto"
             >
               🔄 Reset
             </button>
@@ -855,37 +865,37 @@ export default function App() {
         {/* Programs list */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading ? (
-            <div className="col-span-full text-center py-8 text-lg text-blue-400">
+            <div className="col-span-full text-center py-8 text-lg text-blue-600">
               Loading...
             </div>
           ) : errorMsg ? (
-            <div className="col-span-full text-center py-8 text-lg text-red-400">
+            <div className="col-span-full text-center py-8 text-lg text-red-600">
               {errorMsg}
             </div>
           ) : filteredPrograms.length === 0 ? (
-            <div className="col-span-full text-center py-8 text-lg text-gray-400">
+            <div className="col-span-full text-center py-8 text-lg text-gray-500">
               No programs found.
             </div>
           ) : (
             filteredPrograms.map((program) => (
               <div
                 key={program.id}
-                className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border border-gray-700 shadow-md hover:shadow-xl transition-all duration-300"
+                className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300"
               >
-                <h3 className="text-xl font-bold text-white">
+                <h3 className="text-xl font-bold text-gray-900">
                   {program.name}{" "}
                   {program.version ? (
-                    <span className="text-sm text-gray-400 font-normal">
+                    <span className="text-sm text-gray-500 font-normal">
                       ({program.version})
                     </span>
                   ) : null}
                 </h3>
-                <div className="mt-4 text-sm text-gray-300 space-y-2 leading-relaxed">
+                <div className="mt-4 text-sm text-gray-700 space-y-2 leading-relaxed">
                   {/* OS readable display */}
                   {program.os && (
                     <div>
-                      <span className="font-semibold text-blue-400">OS:</span>{" "}
-                      <span className="text-white">
+                      <span className="font-semibold text-blue-600">OS:</span>{" "}
+                      <span>
                         {(() => {
                           try {
                             const arr = JSON.parse(program.os!);
@@ -901,52 +911,39 @@ export default function App() {
                   )}
                   {program.cpu_min_name && (
                     <div>
-                      <span className="font-semibold text-purple-400">
+                      <span className="font-semibold text-purple-600">
                         CPU min:
                       </span>{" "}
-                      <span className="text-white">{program.cpu_min_name}</span>
+                      <span>{program.cpu_min_name}</span>
                       {program.cpu_min_bench !== undefined && (
-                        <span className="text-gray-400">
-                          {" "}
-                          (bench: {program.cpu_min_bench})
-                        </span>
+                        <span className="text-gray-500"> (bench: {program.cpu_min_bench})</span>
                       )}
                     </div>
                   )}
                   {program.gpu_min_name && (
                     <div>
-                      <span className="font-semibold text-green-400">
-                        GPU min:
-                      </span>{" "}
-                      <span className="text-white">{program.gpu_min_name}</span>
+                      <span className="font-semibold text-green-600">GPU min:</span>{" "}
+                      <span>{program.gpu_min_name}</span>
                       {program.gpu_min_bench !== undefined && (
-                        <span className="text-gray-400">
-                          {" "}
-                          (bench: {program.gpu_min_bench})
-                        </span>
+                        <span className="text-gray-500"> (bench: {program.gpu_min_bench})</span>
                       )}
                     </div>
                   )}
                   {program.ram_min && (
                     <div>
-                      <span className="font-semibold text-pink-400">
+                      <span className="font-semibold text-pink-600">
                         RAM min:
                       </span>{" "}
-                      <span className="text-white">{program.ram_min}</span>
+                      <span>{program.ram_min}</span>
                       {program.ram_min_gb !== undefined && (
-                        <span className="text-gray-400">
-                          {" "}
-                          ({program.ram_min_gb} GB)
-                        </span>
+                        <span className="text-gray-500"> ({program.ram_min_gb} GB)</span>
                       )}
                     </div>
                   )}
                   {program.disk_space && (
                     <div>
-                      <span className="font-semibold text-yellow-400">
-                        Disk:
-                      </span>{" "}
-                      <span className="text-white">{program.disk_space}</span>
+                      <span className="font-semibold text-yellow-600">Disk:</span>{" "}
+                      <span>{program.disk_space}</span>
                     </div>
                   )}
                 </div>
