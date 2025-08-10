@@ -110,7 +110,7 @@ export default function Step4Results({
       </motion.h2>
 
       <motion.div 
-        className="space-y-6"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         variants={containerVariants}
       >
         {results.map(({ laptop, score, analysis }, index) => {
@@ -125,7 +125,7 @@ export default function Step4Results({
           return (
             <motion.div
               key={laptop.id}
-              className="group bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 hover:border-orange-300/50 transition-all duration-300 overflow-hidden"
+              className="group bg-white/80 backdrop-blur-sm p-4 rounded-xl shadow-md border border-gray-200/50 hover:border-orange-300/50 transition-all duration-300 overflow-hidden flex flex-col"
               variants={itemVariants}
               whileHover={{ 
                 y: -8, 
@@ -137,13 +137,10 @@ export default function Step4Results({
               {/* Background decoration */}
               <div className="absolute inset-0 bg-gradient-to-br from-orange-50/30 to-red-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               
-              <div className="relative z-10 flex flex-col md:flex-row gap-6">
-                <Link
-                  href={`/laptop-selector/${laptop.id}`}
-                  className="md:w-1/3 block group"
-                >
+              <div className="relative z-10 flex flex-col gap-4 h-full">
+                <Link href={`/laptop-selector/${laptop.id}`} className="block group">
                   <motion.div 
-                    className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center overflow-hidden relative"
+                    className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center overflow-hidden relative"
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.3 }}
                   >
@@ -151,11 +148,11 @@ export default function Step4Results({
                       <motion.img
                         src={laptop.image_url}
                         alt={laptop.name || "laptop"}
-                        className="w-full h-full object-cover rounded-xl"
-                        initial={{ scale: 1.1 }}
+                        className="w-full h-full object-cover rounded-lg"
+                        initial={{ scale: 1.06 }}
                         animate={{ scale: 1 }}
                         transition={{ duration: 0.6 }}
-                        whileHover={{ scale: 1.05 }}
+                        whileHover={{ scale: 1.03 }}
                       />
                     ) : (
                       <div className="text-gray-500 text-center">
@@ -163,14 +160,12 @@ export default function Step4Results({
                         تصویر لپ‌تاپ
                       </div>
                     )}
-                    
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg" />
                   </motion.div>
                 </Link>
 
-                <div className="md:w-2/3">
-                  <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-3">
                     <Link
                       href={`/laptop-selector/${laptop.id}`}
                       className="text-2xl font-bold hover:text-orange-600 transition-colors duration-200"
@@ -186,16 +181,14 @@ export default function Step4Results({
                       transition={{ delay: 0.3 + index * 0.1 }}
                     >
                       <div className="text-sm text-gray-600 mb-1">امتیاز سازگاری</div>
-                      <div
-                        className={`font-bold text-white rounded-full w-20 h-20 flex items-center justify-center bg-gradient-to-br ${scoreClass} shadow-lg`}
-                      >
+                      <div className={`font-bold text-white rounded-full w-16 h-16 flex items-center justify-center bg-gradient-to-br ${scoreClass} shadow-lg`}>
                         {score}%
                       </div>
                     </motion.div>
                   </div>
 
                   <motion.div 
-                    className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-gray-700"
+                    className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-gray-700"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 + index * 0.1 }}
@@ -228,26 +221,26 @@ export default function Step4Results({
                   </motion.div>
 
                   <motion.div 
-                    className="mt-6 flex items-center gap-4 flex-wrap"
+                    className="mt-4 flex items-center gap-3 flex-wrap"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 + index * 0.1 }}
                   >
                     <Link
                       href={`/laptop-selector/${laptop.id}`}
-                      className="inline-block bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105"
+                      className="inline-block bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold px-4 py-2.5 rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105"
                     >
                       مشاهده جزئیات
                     </Link>
 
                     {typeof laptop.price_eur === "number" && (
-                      <div className="text-gray-700 bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-2 rounded-lg border border-green-200">
+                      <div className="text-gray-700 bg-gradient-to-r from-green-50 to-emerald-50 px-3 py-1.5 rounded-lg border border-green-200">
                         <strong>قیمت:</strong> €
                         {laptop.price_eur?.toLocaleString?.() ?? laptop.price_eur}
                       </div>
                     )}
 
-                    <label className="ml-auto inline-flex items-center gap-3 cursor-pointer select-none">
+                    <label className="ml-auto inline-flex items-center gap-2 cursor-pointer select-none">
                       <div className="relative">
                         <input
                           type="checkbox"
@@ -281,7 +274,7 @@ export default function Step4Results({
 
                   {analysis.length > 0 && (
                     <motion.div 
-                      className="mt-6 pt-4 border-t border-gray-200"
+                      className="mt-4 pt-3 border-t border-gray-200"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.6 + index * 0.1 }}
@@ -291,7 +284,7 @@ export default function Step4Results({
                         {analysis.map((a, idx) => (
                           <motion.span
                             key={idx}
-                            className={`px-4 py-2 text-sm rounded-full font-medium ${
+                            className={`px-3 py-1.5 text-sm rounded-full font-medium ${
                               a.color === "green"
                                 ? "bg-green-100 text-green-800 border border-green-200"
                                 : a.color === "yellow"

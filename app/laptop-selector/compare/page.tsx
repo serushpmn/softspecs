@@ -75,11 +75,13 @@ export default function ComparePage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8 max-w-6xl" dir="rtl">
-      <div className="mb-4 flex items-center justify-between">
-        <Link href="/laptop-selector" className="text-blue-600 hover:underline">
+      <div className="mb-6 flex items-center justify-between">
+        <Link href="/laptop-selector" className="text-brand-600 hover:underline">
           ← بازگشت
         </Link>
-        <h1 className="text-2xl font-bold">مقایسه لپ‌تاپ‌ها</h1>
+        <h1 className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-brand-600 to-accent-600 bg-clip-text text-transparent">
+          مقایسه لپ‌تاپ‌ها
+        </h1>
         <div />
       </div>
 
@@ -94,15 +96,15 @@ export default function ComparePage() {
           ابتدا از صفحه نتایج، تا ۳ مدل را برای مقایسه انتخاب کنید.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border rounded-lg bg-white">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-3 text-right">مشخصه</th>
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-brand-50 to-accent-50">
+                <th className="p-4 text-right sticky left-0 bg-gradient-to-r from-brand-50 to-accent-50 z-10 w-44">مشخصه</th>
                 {rows.map((r) => (
-                  <th key={r.id} className="p-3 text-right">
+                  <th key={r.id} className="p-4 text-right">
                     <div className="flex items-center gap-3">
-                      <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                         {r.image_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -111,22 +113,17 @@ export default function ComparePage() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <span className="text-xs text-gray-500">
-                            بدون تصویر
-                          </span>
+                          <span className="text-xs text-gray-500">بدون تصویر</span>
                         )}
                       </div>
                       <div>
                         <div className="font-semibold">
-                          <Link
-                            href={`/laptop-selector/${r.id}`}
-                            className="hover:underline"
-                          >
+                          <Link href={`/laptop-selector/${r.id}`} className="hover:underline">
                             {r.name}
                           </Link>
                         </div>
                         {typeof r.price_eur === "number" && (
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-gray-700">
                             €{r.price_eur.toLocaleString?.() ?? r.price_eur}
                           </div>
                         )}
@@ -137,13 +134,35 @@ export default function ComparePage() {
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {(
                 [
+                  [
+                    "امتیاز کلی تقریبی",
+                    (r: Row) => (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-white text-xs font-bold bg-gradient-to-r from-orange-600 to-red-600">
+                        {(Math.round(((r.cpu_score ?? 0) * 0.4 + (r.ram_gb ?? 0) * 0.4 + (r.gpu_score ?? 0) * 0.2) || 0))}%
+                      </span>
+                    ),
+                  ],
                   ["پردازنده", (r: Row) => r.cpu_name || "-"],
-                  ["امتیاز CPU", (r: Row) => r.cpu_score ?? "-"],
+                  [
+                    "امتیاز CPU",
+                    (r: Row) => (
+                      <span className="inline-block px-2 py-1 rounded bg-brand-50 text-brand-700 text-xs font-semibold">
+                        {r.cpu_score ?? "-"}
+                      </span>
+                    ),
+                  ],
                   ["گرافیک", (r: Row) => r.gpu_name || "-"],
-                  ["امتیاز GPU", (r: Row) => r.gpu_score ?? "-"],
+                  [
+                    "امتیاز GPU",
+                    (r: Row) => (
+                      <span className="inline-block px-2 py-1 rounded bg-accent-50 text-accent-700 text-xs font-semibold">
+                        {r.gpu_score ?? "-"}
+                      </span>
+                    ),
+                  ],
                   [
                     "RAM",
                     (r: Row) => (r.ram_gb != null ? `${r.ram_gb} GB` : "-"),
@@ -160,7 +179,7 @@ export default function ComparePage() {
                           href={r.purchase_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
+                          className="text-brand-600 hover:underline"
                         >
                           مشاهده
                         </a>
@@ -170,10 +189,10 @@ export default function ComparePage() {
                   ],
                 ] as Array<[string, (r: Row) => ReactNode]>
               ).map(([label, render], idx) => (
-                <tr key={idx} className={idx % 2 ? "bg-gray-50/50" : ""}>
-                  <td className="p-3 font-medium w-40">{label}</td>
+                <tr key={idx} className={idx % 2 ? "bg-gray-50/50" : "bg-white"}>
+                  <td className="p-4 font-medium w-44 sticky left-0 bg-inherit z-10">{label}</td>
                   {rows.map((r) => (
-                    <td key={r.id} className="p-3">
+                    <td key={r.id} className="p-4 align-top">
                       {render(r)}
                     </td>
                   ))}
@@ -185,13 +204,22 @@ export default function ComparePage() {
       )}
 
       {rows.length > 0 && (
-        <div className="mt-6 text-left">
+        <div className="mt-6 flex items-center justify-between">
           <button
             onClick={() => router.push("/laptop-selector")}
-            className="bg-gray-200 px-4 py-2 rounded"
+            className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold"
           >
             تغییر انتخاب
           </button>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/laptop-selector/${rows[0].id}`}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-600 text-white font-bold shadow-sm hover:shadow-md"
+            >
+              مشاهده جزئیات اولین مدل
+            </Link>
+          </div>
         </div>
       )}
     </div>

@@ -36,7 +36,7 @@ const itemVariants = {
     x: 0, 
     scale: 1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 300,
       damping: 25
     }
@@ -132,7 +132,7 @@ export default function Step2Weighting({
                 </div>
                 
                 {/* Custom Range Slider */}
-                <div className="relative">
+                <div className="relative" dir="ltr">
                   <input
                     type="range"
                     min={0}
@@ -145,19 +145,8 @@ export default function Step2Weighting({
                     }}
                   />
                   
-                  {/* Progress bar visualization */}
-                  <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
-                      variants={progressVariants}
-                      custom={weight}
-                      initial="hidden"
-                      animate="visible"
-                    />
-                  </div>
-                  
-                  {/* Weight markers */}
-                  <div className="flex justify-between text-xs text-gray-500 mt-2">
+                   {/* Weight markers */}
+                  <div className="flex justify-between text-xs text-gray-500 mt-2" dir="ltr">
                     <span>0%</span>
                     <span>25%</span>
                     <span>50%</span>

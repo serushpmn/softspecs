@@ -150,7 +150,7 @@ export default function Step1CategorySelect({
               <ul className={`space-y-0.5 text-sm leading-snug relative z-10 ${isSelected ? "text-white/90" : "text-gray-700"}`}>
                 {cat.subitems.map((s, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="mt-1 text-blue-500">•</span>
+                    <span className="mt-1">•</span>
                     <span>{s}</span>
                   </li>
                 ))}

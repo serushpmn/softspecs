@@ -23,53 +23,53 @@ const containerVariants = {
     opacity: 1,
     transition: {
       staggerChildren: 0.1,
-      delayChildren: 0.2
-    }
-  }
+      delayChildren: 0.2,
+    },
+  },
 };
 
 const itemVariants = {
-  hidden: { 
-    opacity: 0, 
-    y: 20, 
-    scale: 0.95
+  hidden: {
+    opacity: 0,
+    y: 20,
+    scale: 0.95,
   },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
+  visible: {
+    opacity: 1,
+    y: 0,
     scale: 1,
     transition: {
       type: "spring",
       stiffness: 300,
-      damping: 20
-    }
-  }
+      damping: 20,
+    },
+  },
 };
 
 const modalVariants = {
-  hidden: { 
-    opacity: 0, 
+  hidden: {
+    opacity: 0,
     scale: 0.8,
-    y: 50
+    y: 50,
   },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     scale: 1,
     y: 0,
     transition: {
       type: "spring",
       stiffness: 300,
-      damping: 25
-    }
+      damping: 25,
+    },
   },
   exit: {
     opacity: 0,
     scale: 0.8,
     y: 50,
     transition: {
-      duration: 0.2
-    }
-  }
+      duration: 0.2,
+    },
+  },
 };
 
 export default function Step3SoftwareSelection({
@@ -102,14 +102,14 @@ export default function Step3SoftwareSelection({
   }, [programs, selectedCategories]);
 
   return (
-    <motion.section 
-      className="space-y-8" 
+    <motion.section
+      className="space-y-8"
       dir="rtl"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
-      <motion.h2 
+      <motion.h2
         className="text-3xl md:text-4xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -118,7 +118,7 @@ export default function Step3SoftwareSelection({
         نرم‌افزارها یا بازی‌ها را انتخاب کنید
       </motion.h2>
 
-      <motion.div 
+      <motion.div
         className="grid md:grid-cols-2 gap-8"
         variants={containerVariants}
       >
@@ -127,20 +127,22 @@ export default function Step3SoftwareSelection({
           const list = byCategory[cat] || [];
 
           return (
-            <motion.div 
-              key={cat} 
+            <motion.div
+              key={cat}
               className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 hover:border-purple-300/50 transition-all duration-300"
               variants={itemVariants}
-              whileHover={{ 
-                y: -5, 
+              whileHover={{
+                y: -5,
                 boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-                borderColor: "#a78bfa"
+                borderColor: "#a78bfa",
               }}
               custom={catIndex}
             >
               <div className="flex items-center gap-3 mb-4 border-b border-gray-200 pb-3">
                 <div className="text-3xl">{catMeta?.icon}</div>
-                <h3 className="text-2xl font-bold text-gray-800">{catMeta?.name}</h3>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {catMeta?.name}
+                </h3>
               </div>
 
               <div className="space-y-4">
@@ -150,7 +152,9 @@ export default function Step3SoftwareSelection({
                     className="flex items-start justify-between gap-4 p-3 rounded-xl hover:bg-gray-50/50 transition-all duration-200"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + catIndex * 0.1 + progIndex * 0.05 }}
+                    transition={{
+                      delay: 0.3 + catIndex * 0.1 + progIndex * 0.05,
+                    }}
                   >
                     <label className="flex items-center gap-3 cursor-pointer group">
                       <div className="relative">
@@ -167,8 +171,16 @@ export default function Step3SoftwareSelection({
                             animate={{ scale: 1 }}
                             transition={{ type: "spring", stiffness: 400 }}
                           >
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            <svg
+                              className="w-3 h-3 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
                             </svg>
                           </motion.div>
                         )}
@@ -185,8 +197,18 @@ export default function Step3SoftwareSelection({
                       whileTap={{ scale: 0.95 }}
                       aria-label={`نمایش سیستم موردنیاز برای ${p.name}`}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       سیستم موردنیاز
                     </motion.button>
@@ -194,7 +216,7 @@ export default function Step3SoftwareSelection({
                 ))}
 
                 {list.length === 0 && (
-                  <motion.div 
+                  <motion.div
                     className="text-gray-500 text-center py-8"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -210,7 +232,7 @@ export default function Step3SoftwareSelection({
         })}
       </motion.div>
 
-      <motion.div 
+      <motion.div
         className="flex justify-center gap-4 mt-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -223,13 +245,23 @@ export default function Step3SoftwareSelection({
           whileTap={{ scale: 0.95 }}
         >
           <span className="flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             بازگشت
           </span>
         </motion.button>
-        
+
         <motion.button
           onClick={onNext}
           className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
@@ -238,8 +270,18 @@ export default function Step3SoftwareSelection({
         >
           <span className="flex items-center gap-2">
             نمایش لپ‌تاپ‌ها
-            <svg className="w-5 h-5 -scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg
+              className="w-5 h-5 -scale-x-100"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </span>
         </motion.button>
@@ -284,7 +326,7 @@ export default function Step3SoftwareSelection({
               {/* Content */}
               <div className="p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <motion.div 
+                  <motion.div
                     className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-5 border border-blue-200"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -292,7 +334,9 @@ export default function Step3SoftwareSelection({
                   >
                     <div className="flex items-center gap-2 mb-3">
                       <div className="text-2xl">⚡</div>
-                      <div className="font-bold text-lg text-blue-800">حداقل سیستم</div>
+                      <div className="font-bold text-lg text-blue-800">
+                        حداقل سیستم
+                      </div>
                     </div>
                     <ul className="text-gray-700 space-y-2">
                       <li className="flex items-center gap-2">
@@ -309,8 +353,8 @@ export default function Step3SoftwareSelection({
                       </li>
                     </ul>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-5 border border-green-200"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -318,7 +362,9 @@ export default function Step3SoftwareSelection({
                   >
                     <div className="flex items-center gap-2 mb-3">
                       <div className="text-2xl">🚀</div>
-                      <div className="font-bold text-lg text-green-800">سیستم پیشنهادی</div>
+                      <div className="font-bold text-lg text-green-800">
+                        سیستم پیشنهادی
+                      </div>
                     </div>
                     <ul className="text-gray-700 space-y-2">
                       <li className="flex items-center gap-2">
@@ -337,7 +383,7 @@ export default function Step3SoftwareSelection({
                   </motion.div>
                 </div>
 
-                <motion.div 
+                <motion.div
                   className="text-center mt-6"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
